@@ -29,7 +29,7 @@ export default function RecruitHeader() {
     >
       <div className="max-w-[1440px] mx-auto px-4 md:px-12 h-full flex items-center justify-between gap-3 md:gap-8">
         
-        {/* 左側：enuロゴ（自信のあるモダンゴシック体へ） */}
+        {/* 左側：enuロゴ */}
         <div
           className={`flex items-baseline gap-5 md:gap-8 shrink-0 transition-colors duration-700 ${
             scrolled ? "text-[#2c221a]" : "text-white drop-shadow-md"
@@ -47,7 +47,7 @@ export default function RecruitHeader() {
           </span>
         </div>
 
-        {/* 右側：スマホでも全表示される横並びメニュー */}
+        {/* 右側：ナビゲーションメニュー */}
         <nav 
           className="flex items-center gap-5 sm:gap-8 md:gap-14 text-[10px] md:text-[0.85rem] tracking-[0.2em] md:tracking-[0.3em] font-bold overflow-x-auto whitespace-nowrap px-2 scrollbar-hide h-full"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}

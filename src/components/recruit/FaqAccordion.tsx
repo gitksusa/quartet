@@ -14,6 +14,10 @@ const faqItems: FaqItem[] = [
       '大丈夫です。enuでは、"未経験から育てる"ことを前提にしています。技術マニュアルやチェック制度も整えながら、段階的にデビューを目指します。',
   },
   {
+    question: "デビューまでどれくらいですか？",
+    answer: "1ヶ月半〜3ヶ月でのデビューを目指します。一人ひとりの成長スピードに合わせて進めますのでご安心ください。",
+  },
+  {
     question: "技術に自信がなくても大丈夫ですか？",
     answer:
       "大丈夫です。完璧な技術を求めているわけではありません。不安なことや迷うことがあれば、相談しながら進めていける方を歓迎しています。",
@@ -51,15 +55,19 @@ const faqItems: FaqItem[] = [
 ];
 
 export default function FaqAccordion() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  // 複数開けるように配列で管理します
+  const [openIndices, setOpenIndices] = useState<number[]>([]);
 
-  const toggle = (index: number) =>
-    setOpenIndex((prev) => (prev === index ? null : index));
+  const toggle = (index: number) => {
+    setOpenIndices((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
 
   return (
     <div className="max-w-xl mx-auto space-y-0 divide-y divide-[#b09880]/20 border-t border-b border-[#b09880]/20">
       {faqItems.map((item, index) => {
-        const isOpen = openIndex === index;
+        const isOpen = openIndices.includes(index);
         return (
           <div key={index} className="overflow-hidden">
             <button
@@ -69,15 +77,13 @@ export default function FaqAccordion() {
               aria-expanded={isOpen}
             >
               <span className="flex items-center gap-4 flex-1">
-                {/* Qの文字を少し細く、淡いブラウンに */}
                 <span className="text-[#b09880] font-light text-sm shrink-0 font-shippori">
                   Q.
                 </span>
-                <span className="text-[#3a3028]/90 text-sm tracking-wide font-normal">
+                <span className="text-[#3a3028]/90 text-[13.5px] md:text-sm tracking-wide font-normal">
                   {item.question}
                 </span>
               </span>
-              {/* 矢印アイコンをより細く華奢なデザインへ変更 */}
               <span
                 className={`shrink-0 text-[#b09880] opacity-60 transition-transform duration-300 ${
                   isOpen ? "rotate-180" : "rotate-0"
@@ -112,8 +118,7 @@ export default function FaqAccordion() {
                   <span className="text-[#b09880] font-light text-sm shrink-0 font-shippori">
                     A.
                   </span>
-                  {/* 回答の行間をたっぷり空けて優しい印象に */}
-                  <p className="text-[#3a3028]/80 text-xs md:text-sm leading-[2.1] font-light">
+                  <p className="text-[#3a3028]/80 text-[13px] md:text-sm leading-[2.1] font-light">
                     {item.answer}
                   </p>
                 </div>
