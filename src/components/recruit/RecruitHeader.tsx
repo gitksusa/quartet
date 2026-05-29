@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const navItems = [
@@ -28,9 +27,13 @@ export default function RecruitHeader() {
       }`}
     >
       <div className="max-w-6xl mx-auto px-4 md:px-6 flex items-center justify-between">
-        <Link href="#top" className={`font-semibold tracking-[0.2em] transition-colors duration-300 flex-shrink-0 ${isScrolled ? "text-[#2c221a]" : "text-white"} text-sm md:text-xl`}>
+        {/* ▼ HPへのリンクに変更し、hover効果を追加しました ▼ */}
+        <a 
+          href="https://qrtt.jp/s/enu" 
+          className={`font-semibold tracking-[0.2em] transition-all duration-300 flex-shrink-0 hover:opacity-70 ${isScrolled ? "text-[#2c221a]" : "text-white"} text-sm md:text-xl`}
+        >
           enu
-        </Link>
+        </a>
         
         {/* スマホでもスワイプなしで全部見えるように調整 */}
         <nav className="flex items-center gap-2 sm:gap-5">

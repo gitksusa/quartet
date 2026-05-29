@@ -3,7 +3,7 @@ import Image from "next/image";
 import RecruitHeader from "@/components/recruit/RecruitHeader";
 import FaqAccordion from "@/components/recruit/FaqAccordion";
 import ScrollReveal from "@/components/recruit/ScrollReveal";
-import FloatingNav from "@/components/recruit/FloatingNav"; // ★追加
+import FloatingNav from "@/components/recruit/FloatingNav";
 import React from "react";
 
 export const metadata: Metadata = {
@@ -16,7 +16,6 @@ type Props = {
   params: Promise<{ salon_slug: string }>;
 };
 
-// ─── 自然な折り返しヘルパー ──────────────────────────────────────
 function renderWrapped(text: string) {
   return text.split('\n\n').map((para, pi) => (
     <span key={pi} className={pi > 0 ? "block mt-4" : "block"}>
@@ -31,48 +30,33 @@ const W = ({ children }: { children: React.ReactNode }) => (
   <span className="inline-block">{children}</span>
 );
 
-// ─── データ ────────────────────────────────────────────────────
-// (データ部分は変更なしのため省略せずにそのまま記載します)
-const strengthCards = [
-  { num: "01", title: "デビュー前に|しっかりと技術を|身につけられます", body: "モデル様に|ご協力いただきながら、|段階的に経験を積める環境を|整えています。\n\n技術だけでなく、|「対応力」や「提案力」も|身につけながら、|少しずつ成長していけます。" },
-  { num: "02", title: "技術も接客も大切に", body: "ただ技術が|できるだけではなく、|「またお願いしたい」と|思っていただける|接客や対応力も|大切にしています。\n\nネイリストとして、|長く活躍できる力を|育ててしていきます。" },
-  { num: "03", title: "駅近で通いやすい", body: "本川越駅徒歩0分。|通勤しやすく、|お客様にも|通っていただきやすい立地です。" },
-  { num: "04", title: "長く働ける環境づくり", body: "経験を積みながら|高単価技術・育成・|マネジメント・店長など、|キャリアアップも目指せる環境を|整えていきます。" },
-];
-
-const steps = [
-  { num: "01", phase: "入社", title: "サロン内研修・基本習得", body: "enuの理念や接客マナー、|ベース技術を|マニュアルに沿って学びます。" },
-  { num: "02", phase: "モデル練習", title: "モデル施術・技術練習", body: "課題練習や、|モデル様に|ご協力いただきながら、|技術や接客を|身につけていきます。" },
-  { num: "03", phase: "チェック", title: "技術チェック・合格", body: "仕上がりや持ち、接客の|最終チェックを|オーナーと共に行い、|デビューを決定します。" },
-  { num: "04", phase: "デビュー", title: "ネイリストデビュー！", body: "お客様の入客がスタート！|デビュー後も|トレンド技術の習得を|継続的にサポートします。" },
-];
-
+// ─── 募集要項データ ────────────────────────────────────────
 const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = [
   { 
     label: "雇用形態", 
     items: [
-      <span key="1" className="block text-[12.5px] md:text-[0.95rem] mb-1.5 text-[#2c221a]">正社員</span>
+      <span key="1" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-semibold">正社員</span>
     ],
     icon: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.5c0-2.33 4.67-3.5 7-3.5s7 1.17 7 3.5v.5z"
   },
   { 
     label: "給与", 
     items: [
-      <span key="1" className="block text-[12.5px] md:text-[0.95rem] text-[#2c221a] mb-1">未経験</span>,
-      <span key="2" className="block text-[12.5px] md:text-[0.95rem] text-[#2c221a] pl-3 md:pl-4 mb-1">
-        <span className="inline-block">試用期間：</span>
-        <span className="inline-block whitespace-nowrap">時給 1,150円〜</span>
+      <span key="1" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">未経験</span>,
+      <span key="2" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-1">
+        <span>試用期間：</span>
+        <span className="font-semibold">時給 1,150円〜</span>
       </span>,
-      <span key="3" className="block text-[12.5px] md:text-[0.95rem] text-[#2c221a] pl-3 md:pl-4 mb-4">
-        <span className="inline-block">デビュー後：</span>
-        <span className="inline-block whitespace-nowrap">月給 210,000円〜</span>
+      <span key="3" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-4">
+        <span>デビュー後：</span>
+        <span className="font-semibold">月給 210,000円〜</span>
       </span>,
-      <span key="4" className="block text-[12.5px] md:text-[0.95rem] text-[#2c221a] mb-1">経験者（全メニューデビュー済）</span>,
-      <span key="5" className="block text-[12.5px] md:text-[0.95rem] text-[#2c221a] pl-3 md:pl-4 mb-2">
-        <span className="inline-block whitespace-nowrap">月給 220,000円〜</span>
+      <span key="4" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">経験者（全メニューデビュー済）</span>,
+      <span key="5" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-3">
+        <span className="font-semibold">月給 220,000円〜</span>
       </span>,
-      <span key="6" className="block text-[#8e735b] text-[11px] md:text-xs pt-1 font-medium">
-        <span className="inline-block whitespace-nowrap">※技術・売上に応じて優遇あり◎</span>
+      <span key="6" className="block text-[#8e735b] text-[12px] md:text-[13px] font-bold bg-[#8e735b]/5 border border-[#8e735b]/20 rounded-lg px-3 py-1.5 inline-block tracking-wide mt-1">
+        ※技術・売上に応じて優遇あり◎
       </span>
     ],
     icon: "M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 3.98 2.53.47 3 1.34 3 2.34 0 1.05-.78 1.92-3 1.92-2.19 0-3-.99-3.11-2.2H4.04c.09 1.97 1.45 3.48 3.46 3.97V21h3v-2.13c2.02-.35 3.5-1.5 3.5-3.55 0-2.54-1.97-3.32-4.7-3.82z"
@@ -80,31 +64,45 @@ const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = 
   { 
     label: "待遇・福利厚生", 
     items: ["社会保険完備", "歩合給あり", "昇給随時", "交通費支給（1万円まで）"].map((text, i) => (
-      <span key={i} className="block text-[12.5px] md:text-[0.95rem] mb-1.5 text-[#2c221a]">{text}</span>
+      <span key={i} className="block text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
     )),
     icon: "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
   },
   { 
     label: "休日", 
     items: ["完全週休2日制", "年末年始休暇あり（12/31〜1/3）", "有休完全消化", "土日希望休相談可◎"].map((text, i) => (
-      <span key={i} className="block text-[12.5px] md:text-[0.95rem] mb-1.5 text-[#2c221a]">{text}</span>
+      <span key={i} className="block text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
     )),
     icon: "M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5z"
   },
   { 
     label: "勤務地", 
     items: ["西武新宿線 本川越駅 徒歩0分", "東武東上線 川越市駅 徒歩5分"].map((text, i) => (
-      <span key={i} className="block text-[12.5px] md:text-[0.95rem] mb-1.5 text-[#2c221a]">{text}</span>
+      <span key={i} className="block text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
     )),
     icon: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
   },
   { 
     label: "勤務時間", 
     items: ["平日 11:00〜20:00", "土日祝 9:30〜18:30", "シフト制"].map((text, i) => (
-      <span key={i} className="block text-[12.5px] md:text-[0.95rem] mb-1.5 text-[#2c221a]">{text}</span>
+      <span key={i} className="block text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
     )),
     icon: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"
   },
+];
+
+const strengthCards = [
+  { num: "01", title: "デビュー前に|しっかりと技術を|身につけられます", body: "モデル様に|ご協力いただきながら、|段階的に経験を積める環境を|整えています。\n\n技術だけでなく、|「対応力」や「提案力」も|身につけながら、|少しずつ成長していけます。" },
+  { num: "02", title: "技術も接客も大切に", body: "ただ技術が|できるだけではなく、|「またお願いしたい」と|思っていただける|接客や対応力も|大切にしています。\n\nネイリストとして、|長く活躍できる力を|育ててしていきます。" },
+  { num: "03", title: "駅近で通いやすい", body: "本川越駅徒歩0分。|通勤しやすく、|お客様にも|通っていただきやすい立地です。" },
+  { num: "04", title: "長く働ける環境づくり", body: "経験を積みながら|高単価技術・育成・|マネジメント・店長など、|キャリアアップも目指せる環境を|整えてしていきます。" },
+];
+
+const steps = [
+  { num: "01", phase: "入社", title: "サロン内研修・基本習得", body: "enuの理念や接客マナー、|ベース技術を|マニュアルに沿って学びます。" },
+  { num: "02", phase: "モデル練習", title: "モデル施術・技術練習", body: "課題練習や、|モデル様に|ご協力いただきながら、|技術や接客を|身につけていきます。" },
+  { num: "03", phase: "チェック", title: "技術チェック・合格", body: "仕上がりや持ち、接客の|最終チェックを|オーナーと共に行い、|デビューを決定します。" },
+  { num: "04", phase: "デビュー", title: "ネイリストデビュー！", body: "お客様の入客がスタート！|デビュー後も|トレンド技術の習得を|継続的にサポートします。" },
 ];
 
 const wantedItems = [
@@ -117,8 +115,6 @@ const wantedItems = [
   { iconPath: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z", text: "仲間と一緒に高め合いたい" },
   { iconPath: "M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z", text: "今は自信ないけど成長したい" },
 ];
-
-// ─── セクション見出し ──────────────────────────
 
 function SectionHeading({ en, ja, center = false }: { en: string; ja: string; center?: boolean }) {
   return (
@@ -151,19 +147,14 @@ function SectionHeading({ en, ja, center = false }: { en: string; ja: string; ce
   );
 }
 
-// ─── ページ本体 ──────────────────────────────────────────────────
-
 export default async function RecruitPage({ params }: Props) {
   await params;
 
   return (
     <>
       <RecruitHeader />
-      
-      {/* ★右下のフローティングナビ（ハンバーガーメニュー＆LINEボタン）を追加 */}
       <FloatingNav />
 
-      {/* カスタムアニメーション定義 */}
       <style>{`
         @keyframes powa {
           0%, 100% { transform: scale(1); filter: brightness(1); }
@@ -246,7 +237,7 @@ export default async function RecruitPage({ params }: Props) {
           </div>
         </section>
 
-        {/* 3. STRENGTHS (★id追加) */}
+        {/* 3. STRENGTHS */}
         <section id="strengths" className="py-24 md:py-48 px-6 bg-[#dfd2c1]">
           <div className="max-w-4xl mx-auto">
             <SectionHeading en="STRENGTHS" ja="enuで働く4つの強み" center />
@@ -301,7 +292,7 @@ export default async function RecruitPage({ params }: Props) {
           </div>
         </section>
 
-        {/* 5. STEPS (★id追加) */}
+        {/* 5. STEPS */}
         <section id="steps" className="py-24 md:py-48 px-6 bg-[#dfd2c1] relative overflow-hidden">
           <div className="absolute inset-0 opacity-[0.07] pointer-events-none"><Image src="/images/recruit/interior_04.jpg" alt="interior deco" fill className="object-cover" /></div>
 
@@ -309,24 +300,40 @@ export default async function RecruitPage({ params }: Props) {
             <SectionHeading en="STEPS" ja="入客までのステップ" center />
             <ScrollReveal animation="fade-up">
               <p className="text-center text-[#8e735b] text-[15px] md:text-lg font-bold tracking-widest -mt-6 mb-12 drop-shadow-sm">〈 デビュー目安：1ヶ月半～3ヶ月 〉</p>
-              <div className="flex overflow-x-auto pb-6 pt-4 gap-6 md:gap-8 scrollbar-hide snap-x snap-mandatory md:grid md:grid-cols-4 md:overflow-x-visible md:pb-0 relative" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
-                {steps.map((step, i) => (
-                  <div key={step.num} className="min-w-[280px] md:min-w-0 snap-center relative bg-white/45 backdrop-blur-md border border-white/60 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-sm flex flex-col items-center text-center transition-all duration-500 hover:shadow-xl hover:-translate-y-2 group">
-                    <div className="flex flex-col items-center gap-2 mb-4 md:mb-5 w-full">
-                      <span className="text-[10px] md:text-xs font-bold text-[#8e735b] tracking-widest border border-[#8e735b]/30 px-3 py-1 rounded-full bg-white/70">Phase {step.num}</span>
-                      <span className="text-[11px] md:text-xs font-bold text-[#8e735b]/80 tracking-[0.1em]">{step.phase}</span>
-                    </div>
-                    <h3 className="text-base md:text-lg font-bold text-[#2c221a] mb-4 md:mb-5 tracking-wide leading-snug font-shippori">{step.title}</h3>
-                    <p className="text-[#2c221a]/90 text-[12.5px] md:text-sm leading-[2.2] font-medium flex-1">{renderWrapped(step.body)}</p>
-                    {i < steps.length - 1 && (
-                      <div className="absolute top-1/2 -right-3 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm border border-[#8e735b]/30 text-[#8e735b] shadow-sm opacity-90 md:-right-4.5 transition-all group-hover:scale-110">
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              
+              <div className="relative group/slider">
+                <div id="step-slider" className="flex overflow-x-auto pb-6 pt-4 gap-6 md:gap-8 scrollbar-hide snap-x snap-mandatory md:grid md:grid-cols-4 md:overflow-x-visible md:pb-0 relative" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
+                  {steps.map((step, i) => (
+                    <div key={step.num} className="min-w-[280px] md:min-w-0 snap-center relative bg-white/45 backdrop-blur-md border border-white/60 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-sm flex flex-col items-center text-center transition-all duration-500 hover:shadow-xl hover:-translate-y-2 group">
+                      <div className="flex flex-col items-center gap-2 mb-4 md:mb-5 w-full">
+                        <span className="text-[10px] md:text-xs font-bold text-[#8e735b] tracking-widest border border-[#8e735b]/30 px-3 py-1 rounded-full bg-white/70">Phase {step.num}</span>
+                        <span className="text-[11px] md:text-xs font-bold text-[#8e735b]/80 tracking-[0.1em]">{step.phase}</span>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <h3 className="text-base md:text-lg font-bold text-[#2c221a] mb-4 md:mb-5 tracking-wide leading-snug font-shippori">{step.title}</h3>
+                      <p className="text-[#2c221a]/90 text-[12.5px] md:text-sm leading-[2.2] font-medium flex-1">{renderWrapped(step.body)}</p>
+                      {i < steps.length - 1 && (
+                        <div className="absolute top-1/2 -right-3 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm border border-[#8e735b]/30 text-[#8e735b] shadow-sm opacity-90 md:-right-4.5 transition-all group-hover:scale-110">
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 右スワイプ用矢印ボタン (スマホ等のみ表示) */}
+                <div dangerouslySetInnerHTML={{ __html: `
+                  <button 
+                    type="button"
+                    class="md:hidden absolute -right-2 top-1/2 -translate-y-1/2 z-30 w-11 h-11 bg-white/90 backdrop-blur-sm border border-[#8e735b]/30 rounded-full shadow-lg flex items-center justify-center text-[#8e735b] hover:bg-white transition-colors"
+                    onclick="document.getElementById('step-slider').scrollBy({ left: document.getElementById('step-slider').firstElementChild.offsetWidth + 24, behavior: 'smooth' })"
+                    aria-label="次のステップへ"
+                  >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                `}} />
               </div>
+
               <div className="mt-12 md:mt-20 bg-white/40 backdrop-blur-sm rounded-[2rem] p-6 md:p-10 max-w-3xl mx-auto border border-white/60 text-center shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-[#8e735b]/5 rounded-bl-full pointer-events-none" />
                 <p className="text-[#2c221a] text-[15px] md:text-[1.2rem] font-bold tracking-[0.05em] mb-4 relative z-10 border-b border-[#8e735b]/20 inline-block pb-2">技術面の不安はすぐに解消！</p>
@@ -338,7 +345,7 @@ export default async function RecruitPage({ params }: Props) {
           </div>
         </section>
 
-        {/* 6. WANTED (★id追加) */}
+        {/* 6. WANTED */}
         <section id="wanted" className="py-24 md:py-48 px-6 bg-[#eadecf]">
           <div className="max-w-4xl mx-auto">
             <SectionHeading en="WANTED" ja="こんな子に来てほしい" center />
@@ -385,20 +392,28 @@ export default async function RecruitPage({ params }: Props) {
         </section>
 
         {/* 7. REQUIREMENTS */}
-        <section id="requirements" className="py-24 md:py-48 px-6 bg-[#dfd2c1]">
+        <section id="requirements" className="py-24 md:py-48 px-4 sm:px-6 bg-[#dfd2c1]">
           <div className="max-w-3xl mx-auto">
             <SectionHeading en="REQUIREMENTS" ja="募集要項" center />
-            <ScrollReveal animation="fade-up" className="bg-white/40 backdrop-blur-md rounded-[2.5rem] p-6 md:p-12 border border-white/60 shadow-xl divide-y divide-[#8e735b]/20">
+            <ScrollReveal animation="fade-up" className="bg-white/40 backdrop-blur-md rounded-[2.5rem] p-5 sm:p-8 md:p-12 border border-white/60 shadow-xl divide-y divide-[#8e735b]/20">
               {jobDetails.map((row) => (
-                <div key={row.label} className="grid grid-cols-[100px_1fr] md:grid-cols-[180px_1fr] gap-4 py-6 md:py-8 items-start">
-                  <dt className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-3">
+                <div key={row.label} className="grid grid-cols-[75px_1fr] md:grid-cols-[160px_1fr] gap-3 sm:gap-4 py-6 md:py-8 items-start">
+                  <dt className="flex flex-col md:flex-row items-center md:items-center gap-1.5 md:gap-3 text-center md:text-left">
                     <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#eadecf] flex items-center justify-center text-[#8e735b] shrink-0 shadow-sm">
                       <svg className="w-4 h-4 md:w-4.5 md:h-4.5" fill="currentColor" viewBox="0 0 24 24"><path d={row.icon} /></svg>
                     </div>
-                    <span className="text-[11px] md:text-sm tracking-[0.1em] md:tracking-[0.15em] text-[#8e735b] font-bold uppercase block">{row.label}</span>
+                    <span className="text-[10px] md:text-sm tracking-tighter md:tracking-[0.15em] text-[#8e735b] font-bold uppercase block leading-tight">
+                      {row.label.includes("・") ? (
+                        <>
+                          <span className="block md:inline">待遇</span>
+                          <span className="hidden md:inline">・</span>
+                          <span className="block md:inline">福利厚生</span>
+                        </>
+                      ) : row.label}
+                    </span>
                   </dt>
-                  <dd className="pl-1 md:pl-4 text-left">
-                    <div>{row.items}</div>
+                  <dd className="pl-1 sm:pl-2 md:pl-4 text-left">
+                    <div className="space-y-1">{row.items}</div>
                   </dd>
                 </div>
               ))}
@@ -426,7 +441,16 @@ export default async function RecruitPage({ params }: Props) {
                   { dt: "店舗名", dd: "enu" },
                   { dt: "電話番号", dd: <a href="tel:05031451101" className="hover:underline text-[#8e735b] font-bold">050-3145-1101</a> },
                   { dt: "住所", dd: <><W>〒350-0042</W> <W>埼玉県川越市中原町2-25-4</W><br /><W>ライラックヴィラⅠ番館302号室</W><div className="mt-2"><a href="https://maps.apple.com/?q=埼玉県川越市中原町2-25-4+ライラックヴィラ" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-[#8e735b]/70 hover:text-[#8e735b] underline"><svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25s-7.5-4.108-7.5-11.25a7.5 7.5 0 1115 0z" /></svg>iPhoneのマップはこちら</a></div></>},
-                  { dt: "アクセス", dd: <><W>西武新宿線 本川越駅</W> <W>徒歩0分</W><br /><W>東武東上線 川越市駅</W> <W>徒歩5分</W></> }
+                  { dt: "アクセス", dd: <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <img src="/S__4096016_0.jpg" alt="西武線" className="w-[18px] h-[18px] md:w-5 md:h-5 object-cover rounded-sm flex-shrink-0" />
+                      <span><W>西武新宿線 本川越駅</W> <W>徒歩0分</W></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <img src="/S__4096015_0.jpg" alt="東武線" className="w-[18px] h-[18px] md:w-5 md:h-5 object-cover rounded-sm flex-shrink-0" />
+                      <span><W>東武東上線 川越市駅</W> <W>徒歩5分</W></span>
+                    </div>
+                  </> }
                 ].map((row, i) => (
                   <div key={i} className="grid grid-cols-[80px_1fr] md:grid-cols-[120px_1fr] gap-4 py-4 md:py-5 items-start">
                     <dt className="text-[11px] md:text-sm text-[#8e735b] font-bold tracking-wider">{row.dt}</dt>
