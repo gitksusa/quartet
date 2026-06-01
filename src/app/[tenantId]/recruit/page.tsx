@@ -6,14 +6,15 @@ import ScrollReveal from "@/components/recruit/ScrollReveal";
 import FloatingNav from "@/components/recruit/FloatingNav";
 import React from "react";
 
+// 修正点1・2：SEOに最強のキーワード（埼玉、本川越、未経験歓迎、正社員、スクール卒業、ニュアンス、韓国など）を自然な文章で組み込んだメタデータ
 export const metadata: Metadata = {
-  title: "求人募集 | enu nailsalon",
-  description:
-    "川越のネイルサロン「enu」のスタッフ求人情報。未経験歓迎・育成型サロン。girly nuance × mood design。本川越駅徒歩0分。",
+  title: '川越のネイリスト求人 | 未経験歓迎・正社員募集のネイルサロンenu',
+  description: '埼玉県・本川越駅すぐのネイルサロンenuでは、正社員ネイリスト（アシスタント）を求人中！未経験歓迎・ネイルスクール卒業の方も安心の研修あり。ニュアンス、韓国、アートなど最新トレンドネイルが学べます。試用期間1,150円〜。',
 };
 
+// 修正点1：フォルダ構造変更に合わせて、パラメータを salon_slug から tenantId に変更
 type Props = {
-  params: Promise<{ salon_slug: string }>;
+  params: Promise<{ tenantId: string }>;
 };
 
 function renderWrapped(text: string) {
@@ -42,17 +43,20 @@ const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = 
   { 
     label: "給与", 
     items: [
-      <span key="1" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">未経験</span>,
-      <span key="2" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-1">
-        <span>試用期間：</span>
-        <span className="font-semibold">時給 1,150円〜</span>
+      // 修正点3：給与の表記を指示書の通りに変更・並び替え
+      <span key="1" className="block text-[14px] md:text-[1rem] text-[#2c221a] font-bold mb-4 border-b border-[#eadecf] pb-2 inline-block">
+        試用期間：時給 1,150円〜
+      </span>,
+      <span key="2" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">
+        未経験（正社員）
       </span>,
       <span key="3" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-4">
-        <span>デビュー後：</span>
         <span className="font-semibold">月給 210,000円〜</span>
       </span>,
-      <span key="4" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">経験者（全メニューデビュー済）</span>,
-      <span key="5" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-3">
+      <span key="4" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">
+        経験者（正社員）
+      </span>,
+      <span key="5" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-4">
         <span className="font-semibold">月給 220,000円〜</span>
       </span>,
       <span key="6" className="block text-[#8e735b] text-[12px] md:text-[13px] font-bold bg-[#8e735b]/5 border border-[#8e735b]/20 rounded-lg px-3 py-1.5 inline-block tracking-wide mt-1">
@@ -326,7 +330,7 @@ export default async function RecruitPage({ params }: Props) {
                   <button 
                     type="button"
                     class="md:hidden absolute -right-2 top-1/2 -translate-y-1/2 z-30 w-11 h-11 bg-white/90 backdrop-blur-sm border border-[#8e735b]/30 rounded-full shadow-lg flex items-center justify-center text-[#8e735b] hover:bg-white transition-colors"
-                    onclick="document.getElementById('step-slider').scrollBy({ left: document.getElementById('step-slider').firstElementChild.offsetWidth + 24, behavior: 'smooth' })"
+                    onclick="document.getElementById('step-slider').scrollBy({ left: 320, behavior: 'smooth' })"
                     aria-label="次のステップへ"
                   >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -479,8 +483,9 @@ export default async function RecruitPage({ params }: Props) {
               </a>
               <p className="mt-6 md:mt-8 text-[11px] md:text-xs text-[#2c221a]/50 tracking-[0.2em] font-medium">LINE ID：@169wzdvp</p>
               <div className="mt-24 md:mt-32 pt-12 md:pt-16 border-t border-[#8e735b]/20 flex flex-col items-center">
-                <a href="https://qrtt.jp/s/enu" className="group block relative w-32 md:w-40 h-16 md:h-20 transition-transform duration-500 hover:scale-105"><Image src="/images/recruit/logo.jpg" alt="enu logo" fill className="object-contain" /></a>
-                <a href="https://qrtt.jp/s/enu" className="text-[10px] md:text-[11px] text-[#8e735b] tracking-[0.2em] border-b border-[#8e735b]/40 pb-1 hover:opacity-60 transition-opacity duration-300 font-semibold mt-4">enu Official Website</a>
+                {/* 修正点：ページ最下部のホームページへのリンクURLからも /s/ を消去しました */}
+                <a href="https://qrtt.jp/enu" className="group block relative w-32 md:w-40 h-16 md:h-20 transition-transform duration-500 hover:scale-105"><Image src="/images/recruit/logo.jpg" alt="enu logo" fill className="object-contain" /></a>
+                <a href="https://qrtt.jp/enu" className="text-[10px] md:text-[11px] text-[#8e735b] tracking-[0.2em] border-b border-[#8e735b]/40 pb-1 hover:opacity-60 transition-opacity duration-300 font-semibold mt-4">enu Official Website</a>
               </div>
             </ScrollReveal>
           </div>
