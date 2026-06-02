@@ -48,13 +48,13 @@ const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = 
         試用期間：時給 1,150円〜
       </span>,
       <span key="2" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">
-        未経験（正社員）
+        未経験
       </span>,
       <span key="3" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-4">
         <span className="font-semibold">月給 210,000円〜</span>
       </span>,
       <span key="4" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">
-        経験者（正社員）
+        経験者
       </span>,
       <span key="5" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-4">
         <span className="font-semibold">月給 220,000円〜</span>
