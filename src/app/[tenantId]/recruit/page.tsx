@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import React from "react";
 import RecruitHeader from "@/components/recruit/RecruitHeader";
-import FaqAccordion from "@/components/recruit/FaqAccordion";
 import ScrollReveal from "@/components/recruit/ScrollReveal";
 import FloatingNav from "@/components/recruit/FloatingNav";
-import React from "react";
 
-// 修正点1・2：SEOに最強のキーワード（埼玉、本川越、未経験歓迎、正社員、スクール卒業、ニュアンス、韓国など）を自然な文章で組み込んだメタデータ
+// 💡 今回切り出した部品をインポートします
+import SectionHeading from "@/components/recruit/shared/SectionHeading";
+import FaqBlock from "@/components/recruit/blocks/FaqBlock";
+
 export const metadata: Metadata = {
   title: '川越のネイリスト求人 | 未経験歓迎・正社員募集のネイルサロンenu',
   description: '埼玉県・本川越駅すぐのネイルサロンenuでは、正社員ネイリスト（アシスタント）を求人中！未経験歓迎・ネイルスクール卒業の方も安心の研修あり。ニュアンス、韓国、アートなど最新トレンドネイルが学べます。試用期間1,150円〜。',
 };
 
-// 修正点1：フォルダ構造変更に合わせて、パラメータを salon_slug から tenantId に変更
 type Props = {
   params: Promise<{ tenantId: string }>;
 };
@@ -43,7 +44,6 @@ const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = 
   { 
     label: "給与", 
     items: [
-      // 修正点3：給与の表記を指示書の通りに変更・並び替え
       <span key="1" className="block text-[14px] md:text-[1rem] text-[#2c221a] font-bold mb-4 border-b border-[#eadecf] pb-2 inline-block">
         試用期間：時給 1,150円〜
       </span>,
@@ -119,37 +119,6 @@ const wantedItems = [
   { iconPath: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z", text: "仲間と一緒に高め合いたい" },
   { iconPath: "M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z", text: "今は自信ないけど成長したい" },
 ];
-
-function SectionHeading({ en, ja, center = false }: { en: string; ja: string; center?: boolean }) {
-  return (
-    <ScrollReveal animation="fade-up">
-      <div className={`relative mb-14 md:mb-24 ${center ? "text-center" : "text-left"}`}>
-        <div className={`absolute -top-6 ${center ? "left-1/2 -translate-x-1/2" : "-left-4 md:-left-6"} w-40 h-16 md:w-56 md:h-24 opacity-[0.04] pointer-events-none mix-blend-multiply`}>
-           <Image src="/images/recruit/logo.jpg" alt="" fill className="object-contain" />
-        </div>
-
-        <div className={`relative z-10 flex items-center gap-3 mb-4 ${center ? "justify-center" : "justify-start"}`}>
-          <div className="w-8 h-[1px] bg-[#a48a71]/40" />
-          <p className="text-[#a48a71] text-[10px] md:text-[11px] tracking-[0.4em] uppercase font-semibold">
-            {en}
-          </p>
-          <div className="w-8 h-[1px] bg-[#a48a71]/40" />
-        </div>
-        <div className="relative z-10 inline-block px-8 md:px-12">
-          <svg className="absolute left-0 top-1/2 -translate-y-1/2 w-6 md:w-8 h-3 md:h-4 text-[#a48a71]/30" viewBox="0 0 40 20">
-            <path d="M40 10 C30 10, 20 0, 0 10 C20 20, 30 10, 40 10" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-          </svg>
-          <h2 className="text-xl md:text-3xl font-medium tracking-[0.15em] text-[#2c221a] font-shippori relative z-10">
-            {ja}
-          </h2>
-          <svg className="absolute right-0 top-1/2 -translate-y-1/2 w-6 md:w-8 h-3 md:h-4 text-[#a48a71]/30 rotate-180" viewBox="0 0 40 20">
-            <path d="M40 10 C30 10, 20 0, 0 10 C20 20, 30 10, 40 10" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-          </svg>
-        </div>
-      </div>
-    </ScrollReveal>
-  );
-}
 
 export default async function RecruitPage({ params }: Props) {
   await params;
@@ -426,14 +395,7 @@ export default async function RecruitPage({ params }: Props) {
         </section>
 
         {/* 8. FAQ */}
-        <section id="faq" className="py-24 md:py-48 px-6 bg-[#eadecf]">
-          <div className="max-w-4xl mx-auto">
-            <SectionHeading en="FAQ" ja="よくある質問" center />
-            <ScrollReveal animation="fade-up" className="bg-white/30 backdrop-blur-sm border border-white/40 rounded-[2.5rem] p-6 md:p-12 shadow-sm max-w-3xl mx-auto">
-              <FaqAccordion />
-            </ScrollReveal>
-          </div>
-        </section>
+        <FaqBlock />
 
         {/* 9. ACCESS */}
         <section className="py-24 md:py-48 px-6 bg-[#dfd2c1]">
@@ -483,7 +445,6 @@ export default async function RecruitPage({ params }: Props) {
               </a>
               <p className="mt-6 md:mt-8 text-[11px] md:text-xs text-[#2c221a]/50 tracking-[0.2em] font-medium">LINE ID：@169wzdvp</p>
               <div className="mt-24 md:mt-32 pt-12 md:pt-16 border-t border-[#8e735b]/20 flex flex-col items-center">
-                {/* 修正点：ページ最下部のホームページへのリンクURLからも /s/ を消去しました */}
                 <a href="https://qrtt.jp/enu" className="group block relative w-32 md:w-40 h-16 md:h-20 transition-transform duration-500 hover:scale-105"><Image src="/images/recruit/logo.jpg" alt="enu logo" fill className="object-contain" /></a>
                 <a href="https://qrtt.jp/enu" className="text-[10px] md:text-[11px] text-[#8e735b] tracking-[0.2em] border-b border-[#8e735b]/40 pb-1 hover:opacity-60 transition-opacity duration-300 font-semibold mt-4">enu Official Website</a>
               </div>
