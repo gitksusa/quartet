@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+このプロジェクト（Quartet）の開発ルールの単一の真実は `/CLAUDE.md`。
+コードを変更する前に、必ず `/CLAUDE.md` と `/docs/roadmap.md` を読み、
+そこに書かれた決定・禁止事項・実装順序（NOW / NEXT / LATER）に従うこと。
+ルールが曖昧・矛盾する場合は `/CLAUDE.md` を優先する。

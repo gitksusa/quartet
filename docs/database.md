@@ -53,6 +53,11 @@ $$ LANGUAGE sql STABLE;
 
 ## 3. コアテーブル定義 (DDL)
 
+> **注：これは v1〜v3 を見据えた全体の参照スキーマ。実装順序は `docs/roadmap.md` に従う。**
+> **全テーブルを一度に作る指示ではない。各テーブルは該当フェーズで作成する。**
+> 例：Phase 0-1（HP・フォーム受付）では予約ドメインテーブル（`reservations` 等）を作らない。
+> 予約系は Phase 2（予約基盤）で、`records` は Phase 6（カルテ）で作成する。
+
 ### [1/13] tenants（テナント）
 
 ```sql
@@ -277,11 +282,17 @@ CREATE INDEX sales_tenant_date_idx
     ON sales (tenant_id, created_at) WHERE deleted_at IS NULL;
 ```
 
-### [11/13] page_blocks（ブロックエディタ・v1から必要）
-HP・求人ページのブロック構成を管理する。
-ドラッグで並べ替えたブロックの順番・ON/OFFをテナントごとに保存する。
+### [11/13] page_blocks（ブロックエディタ・v後半／エディタと同時に実装。v1では作らない）
+HP・求人ページのブロック構成（並べ替え順・ON/OFF）をテナントごとに保存する想定のテーブル。
+
+**v1では作らない。** v1のHPは props 化した React コンポーネントで構成し、
+セクションの ON/OFF は `tenants` の boolean フラグ（`is_recruit_enabled` 等）で制御する。
+ブロックエディタUI（ドラッグ並べ替え・ON/OFF・テーマ切替）を作る最終フェーズ
+（roadmap.md の page_blocks / block editor フェーズ）で、下記のコメントアウトを解除する。
 
 ```sql
+-- v後半（ブロックエディタ実装時）にコメントアウトを解除する。v1では作らない。
+/*
 CREATE TABLE page_blocks (
     id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id  UUID        NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -300,6 +311,7 @@ CREATE TABLE page_blocks (
 );
 CREATE INDEX page_blocks_tenant_page_idx
     ON page_blocks (tenant_id, page_type, sort_order) WHERE deleted_at IS NULL;
+*/
 ```
 
 ### [12/13] consultation_items（症例・悩み写真カタログ・v2）
@@ -360,6 +372,10 @@ CREATE INDEX consultations_customer_id_idx    ON consultations (customer_id);
 
 ## 4. 全テーブルへの制約・ポリシー適用
 
+> 各 `CREATE TRIGGER` / RLS は、対応するテーブルを実際に作成したフェーズで適用する。
+> `page_blocks` / `consultation_items` / `consultations` はまだ作らないため、ここには含めない
+> （該当フェーズでテーブルのコメントアウト解除と同時に追記する）。
+
 ### 4.1 updated_at 自動更新トリガーの適用
 
 ```sql
@@ -383,8 +399,6 @@ CREATE TRIGGER update_attendance_updated_at
     BEFORE UPDATE ON attendance FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_sales_updated_at
     BEFORE UPDATE ON sales FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_page_blocks_updated_at
-    BEFORE UPDATE ON page_blocks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ### 4.2 Row Level Security (RLS) の適用
@@ -398,7 +412,6 @@ ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE records      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sales        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE page_blocks  ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_users_isolation_policy ON tenant_users
     FOR ALL USING (tenant_id = auth.current_tenant_id())
@@ -424,14 +437,15 @@ CREATE POLICY attendance_isolation_policy ON attendance
 CREATE POLICY sales_isolation_policy ON sales
     FOR ALL USING (tenant_id = auth.current_tenant_id())
     WITH CHECK (tenant_id = auth.current_tenant_id());
-CREATE POLICY page_blocks_isolation_policy ON page_blocks
-    FOR ALL USING (tenant_id = auth.current_tenant_id())
-    WITH CHECK (tenant_id = auth.current_tenant_id());
 ```
 
 ---
 
 ## 5. 将来の拡張性への考慮
+
+### v後半：ブロックエディタ
+- `page_blocks` テーブルのコメントアウトを解除し、トリガーとRLSを追加する
+- それまでは HP は React コンポーネント、ON/OFF は `tenants` の boolean フラグで制御
 
 ### v2：カウンセリング機能
 - `consultation_items`・`consultations`テーブルのコメントアウトを解除する
