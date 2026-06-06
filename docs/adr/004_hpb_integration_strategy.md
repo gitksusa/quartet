@@ -45,9 +45,21 @@ Go API（/api/v1/webhooks/gmail）
 - SentryでAPIレート制限（429エラー）の兆候を検知した時
 
 ## 冪等性設計
-- HPBの予約番号をIdempotency Keyとして使用する
-- UPSERTで重複登録を防止する
-- 同じ予約通知が複数回到達しても安全に処理できる設計にする
+- 同じHPB予約通知が複数回到達しても安全に処理できる設計にする。
+- UPSERTで重複登録を防止する。
+
+### 補足：integration_key と idempotency_key の役割分担（database.md と整合）
+HPB連携で使うキーは2種類あり、`reservations` テーブルでは別カラムに分けている。混同しないこと。
+
+- **`integration_key`（HPB予約番号）**：HPB予約を一意に識別するビジネスキー。
+  「同じHPB予約が2通のメールで届いても1件にする」重複防止はこのカラムで行う。
+  `reservations_integration_key_unique_idx`（tenant_id + integration_key の部分一意インデックス）で担保。
+  → **HPBの重複防止＝ integration_key が主役。**
+- **`idempotency_key`**：自社API（HP/LINE経由の予約作成など）の重複リクエスト防止用。
+  HPB取り込みでは原則使わない。
+
+> 旧記述では「HPB予約番号を Idempotency Key として使用」と書いていたが、
+> スキーマ上の正式な役割は上記の通り（HPB予約番号 = integration_key）。
 
 ## エラー設計
 - メール本文のパースエラー発生時はSentryに自動送信する
@@ -61,5 +73,5 @@ OAuthスコープは最小権限の原則に従い、メール読み取りのみ
 メール送信・削除・変更の権限は一切要求しない。
 
 ## トレードオフ
-- ポーリングはPub/Subと比較してリアルタイム性が若干劣る
+- ポーリングはPub/Subと比較してリアルタイム性が若干劣る（メール起点のため構造的に遅延あり＝準リアルタイム）
 - HPBのメール形式が変更された場合はパーサーの修正が必要になる

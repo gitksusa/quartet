@@ -5,6 +5,9 @@ Quartet（qrtt.jp）- 個人サロン・クリニック向け業務管理SaaS
 
 ターゲット：ネイル・エステ・美容室・リラクゼーション・ヘッドスパ・アイラッシュ・クリニックなど個人経営者
 
+> 実装順序（何をどの順で作るか）は `docs/roadmap.md`、開発ルールは `CLAUDE.md` を参照。
+> このファイルは「なぜこの技術構成にしたか」を記す。
+
 ## 技術スタック
 
 ### フェーズ1（0〜10サロン・クリニック）
@@ -72,6 +75,8 @@ qrtt.jp/api/v1/                  # バージョニング必須
 
 ※マイクロサービスではなくモノリス内のドメイン分割。
 将来必要なドメインだけを切り出せる設計にしておく。
+※Reservation と Record は別ドメイン（データもコードも分離）。統合するのは UI のみで、
+　`customer_id` を軸にした顧客中心ビュー（予約タブ／カルテタブ）として将来結合する。
 
 ## マルチテナント設計方針
 
@@ -90,28 +95,31 @@ Users ──< TenantUsers >── Tenants
 - 全APIリクエストでtenant_idを検証する
 - plan（free_forever・trial・basic・pro）をTenantsテーブルで管理する
 
-## Go API実装方針
+## Go API実装方針（後付けコスト軸で段階投入）
 
-### v1から必須
+> Goの本格投入は**予約基盤フェーズ（roadmap.md の Phase 2）から**。
+> HP・フォーム受付フェーズ（Phase 0-1）では Go を使わず、Next.js API Route + Supabase で実装する。
+> 削る軸は「難易度」ではなく「後で足すと地獄か否か」。難しくても後付けが安いものは後回し、
+> 簡単でも後付けが痛いものは初日に入れる。
+
+### 予約基盤（Phase 2）着手時に初日から必須（後付けが地獄）
 - Repository Pattern（DBアクセスの抽象化・テスタブルな設計に必須）
-- Dependency Injection（モックを使った単体テストのしやすさを担保）
-- DTO（API層とDB層の分離）
+- Dependency Injection（手動コンストラクタ注入で行う。wire/fx 等のDIフレームワークは使わない）
+- DTO（リクエスト/レスポンス構造体を分ける。DTO専用パッケージ地獄は作らない）
 - エラーハンドリング統一（Goのエラー型を定義して統一管理）
-- Graceful Shutdown（デプロイ時のリクエスト損失ゼロ）
-- Rate Limiting（不正アクセス防止）
-- Idempotency Keys（決済・予約の二重処理防止）
-- Soft Delete（全テーブルにdeleted_at）
-- Audit Log（全操作の記録・個人情報保護法対応）
 - golang-migrate（DBマイグレーション管理）
 - 構造化JSONログ（全ログをJSON形式で出力）
 - /healthzエンドポイント（死活監視用）
+- Soft Delete（全テーブルにdeleted_at）
+- 二重予約防止＋冪等キー（予約の正しさそのもの。reservations の冪等性/枠の重複チェック）
+- Graceful Shutdown（デプロイ時のリクエスト損失ゼロ）
 - SOLID原則の適用
-- Circuit Breaker（外部API障害の局所化）
 
-### v2以降で追加
-- CQRS（読み書きの責務分離）
-  ※v1では読み書きの分離によるコードの複雑化を避ける
-  ※トラフィック増加後に導入する
+### 段階投入（追加的・後付けが安い。導入時にADRを書く）
+- Audit Log … `audit_logs` テーブルとラッパーは予約基盤フェーズで用意。書き込みは顧客・予約・カルテ・売上など機微テーブルが実データを持つ時点でON（Circuit Breaker より前）
+- Rate Limiting … 必要時（前段の Cloudflare が一次的に担うため後回し可）
+- Circuit Breaker … 外部API（LINE/HPB/Stripe）連携フェーズで投入
+- CQRS … v2以降（トラフィック増加後。v1では読み書き分離による複雑化を避ける）
 
 ## Feature Flags方針
 v1（テナント10件未満）ではTenantsテーブルに
@@ -129,7 +137,7 @@ v2以降でUnleashの導入を検討する。
 - マイグレーションはgolang-migrateで管理する
 - Soft Delete × RLSのユニーク制約ルールを明確に定義する
   （例：deleted_atがNULLの場合のみユニーク制約を適用）
-- 詳細はdocs/database.mdを参照
+- 詳細はdocs/database.mdを参照（実装順序はroadmap.mdに従う・全テーブルを一度に作らない）
 
 ## HPB連携方針
 Gmail APIを使いHPBの予約通知メールを自動取得する。
@@ -149,6 +157,9 @@ Reservationsテーブルに書き込み（UPSERT）
 移行トリガー：テナント数10店舗超 or Sentryで429エラー検知
 （理由・詳細はdocs/adr/004_hpb_integration_strategy.mdを参照）
 
+※HPBはメール起点のため構造的に遅延がある（準リアルタイム）。
+　自社HP予約・LINE予約は即時／ほぼリアルタイム。
+
 ## セキュリティ方針
 - 全通信HTTPS必須
 - WorkOS AuthKitでJWT認証
@@ -160,13 +171,13 @@ Reservationsテーブルに書き込み（UPSERT）
 - シークレットのローテーションを定期実施
 - Dependabotで依存ライブラリの脆弱性を自動検知
 - SSM Session Managerで踏み台廃止（フェーズ2）
-- 全操作をAudit Logに記録
+- 全操作をAudit Logに記録（Audit Logの導入タイミングはGo API実装方針を参照）
 - OWASPチェックリストで節目ごとに確認
 
 ## 負荷分散方針
 - Cloudflareを前段に配置しトラフィックを分散
 - 重い処理はGoのAPIに寄せてNext.jsのタイムアウト（60秒）を回避
-- Circuit BreakerでLINE・HPB等の外部API障害を局所化
+- Circuit BreakerでLINE・HPB等の外部API障害を局所化（外部連携フェーズで導入）
 - フェーズ2でECS Fargateのオートスケールを設定
 
 ## デプロイ・インフラ方針
@@ -186,6 +197,7 @@ Reservationsテーブルに書き込み（UPSERT）
 - コードと設計書を常に一致させる
 - 設計変更はADRに記録してから実装する
 
+統一エラーレスポンス形式：
 ```json
 {
   "error": {
@@ -211,7 +223,7 @@ Reservationsテーブルに書き込み（UPSERT）
 - フェーズ2でPrometheus + Grafanaを追加
 
 ## 法律・コンプライアンス方針
-- プライバシーポリシーを作成・公開する
+- プライバシーポリシーを作成・公開する（フォームで個人情報を集める前に必須）
 - 利用規約を作成・公開する
 - 特定商取引法に基づく表記を行う
 - 資金決済法への準拠を確認する（回数券機能実装前に必須）
@@ -232,6 +244,3 @@ Reservationsテーブルに書き込み（UPSERT）
 | dev | ローカル開発 | feature/* |
 | staging | 本番前の動作確認 | develop |
 | prod | 本番環境 | main |
-```
-
----
