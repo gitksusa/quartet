@@ -1,7 +1,9 @@
+'use client';
 import React from "react";
 import Image from "next/image";
 import ScrollReveal from "@/components/recruit/ScrollReveal";
 import SectionHeading from "@/components/recruit/shared/SectionHeading";
+import { track } from "@vercel/analytics";
 
 const W = ({ children }: { children: React.ReactNode }) => (
   <span className="inline-block">{children}</span>
@@ -31,7 +33,7 @@ export default function InstagramBlock() {
                 </div>
               ))}
             </div>
-            <a href="https://www.instagram.com/enu_kawagoe/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-[#b09880] to-[#8e735b] text-white font-semibold text-sm px-10 py-4 rounded-full shadow-md hover:scale-105 transition-transform duration-300 w-full">
+            <a href="https://www.instagram.com/enu_kawagoe/" target="_blank" rel="noopener noreferrer" onClick={() => track('click_instagram_button', { page: 'recruit' })}  className="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-[#b09880] to-[#8e735b] text-white font-semibold text-sm px-10 py-4 rounded-full shadow-md hover:scale-105 transition-transform duration-300 w-full">
               Instagramを見る
             </a>
           </div>
