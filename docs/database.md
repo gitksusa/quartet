@@ -32,6 +32,16 @@ $$ language 'plpgsql';
 通常の `UNIQUE` 制約は使用せず、生存データ（`deleted_at IS NULL`）のスコープ内でのみ
 一意性を保証する部分一意インデックス（Partial Unique Index）を厳格に適用する。
 
+### 1.4 テーブル作成時の必須5ステップ（順序厳守）
+1. `CREATE TABLE`
+2. `CREATE TRIGGER` （updated_at自動更新）
+3. `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`
+4. `CREATE POLICY` （RLSポリシー）
+5. `GRANT SELECT ON public.xxx TO anon` （公開読み取りが必要な場合）
+   `GRANT INSERT, UPDATE, DELETE ON public.xxx TO authenticated` （認証済みユーザーの書き込みが必要な場合）
+
+**GRANTを忘れるとRLSポリシーがあっても401エラーになる。**
+
 ---
 
 ## 2. 認証・認可・マルチテナント基盤 (RLS)
