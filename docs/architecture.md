@@ -36,11 +36,11 @@ Quartet（qrtt.jp）- 個人サロン・クリニック向け業務管理SaaS
 
 ### 公開ページ（顧客・求職者向け）
 ```
-qrtt.jp/s/{salon_slug}/          # サロン・クリニックHP
-qrtt.jp/s/{salon_slug}/recruit   # 求人ページ（ON/OFF切替可）
-qrtt.jp/s/{salon_slug}/reserve   # 予約ページ
+qrtt.jp/{slug}/          # サロン・クリニックHP
+qrtt.jp/{slug}/recruit   # 求人ページ（ON/OFF切替可）
+qrtt.jp/{slug}/reserve   # 予約ページ
 ```
-※将来的に{salon_slug}.qrtt.jpのサブドメイン型、
+※将来的に{slug}.qrtt.jpのサブドメイン型、
 または独自ドメイン（Cloudflare for SaaS活用）への移行を検討。
 
 ### 管理画面（オーナー・スタッフ向け）
