@@ -17,6 +17,8 @@ import WantedBlock from "@/components/recruit/blocks/WantedBlock";
 import RequirementsBlock from "@/components/recruit/blocks/RequirementsBlock";
 import AccessBlock from "@/components/recruit/blocks/AccessBlock";
 import ContactBlock from "@/components/recruit/blocks/ContactBlock";
+import { notFound } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: '川越のネイリスト求人 | 未経験歓迎・正社員募集のネイルサロンenu',
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 type Props = {
-  params: Promise<{ tenantId: string }>;
+  params: Promise<{ slug: string }>;
 };
 
 function renderWrapped(text: string) {
@@ -130,7 +132,18 @@ const wantedItems = [
 ];
 
 export default async function RecruitPage({ params }: Props) {
-  await params;
+  const { slug } = await params;
+
+  const supabase = await createClient();
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id, name, is_recruit_enabled')
+    .eq('slug', slug)
+    .single();
+
+  if (!tenant || !tenant.is_recruit_enabled) {
+    notFound();
+  }
 
   return (
     <>
