@@ -44,7 +44,7 @@ export default function AboutBlock() {
 
           <div className="space-y-4 md:space-y-6 text-[#2c221a] text-[13px] md:text-base leading-[2.2] md:leading-[2.5] font-medium mt-6 md:mt-12">
             <p><W>enuは、</W><W>「通いやすい価格で、</W><W>毎日ちょっと気分が上がる</W><W>ネイルを楽しめる」</W><W>そんな想いから生まれた</W><W>ニュアンスネイルサロンです。</W></p>
-            <p><span className="font-semibold border-b border-[#a48a71] inline-block">girly nuance × mood design</span> <W>を軸に、</W><W>ちゅるん系・淡色ニュアンス・</W><W>抜け感デザインなど、</W><W>"女性らしい雰囲気"を</W><W>大切にしたデザインを</W><W>ご提案しています。</W></p>
+            <p><span className="font-semibold border-b border-[#a48a71] inline-block">girly nuance × mood design</span> <W>を軸に、</W><W>ちゅるん系・淡色ニュアンス・</W><W>抜け感デザインなど、</W><W>&ldquo;女性らしい雰囲気&rdquo;を</W><W>大切にしたデザインを</W><W>ご提案しています。</W></p>
             <p><W>ただ可愛いだけではなく、</W><W>フィルイン対応・持ちの良さ・</W><W>爪への負担を考えた施術など、</W><W>基礎となる技術面も</W><W>妥協せず追求しているサロンです。</W></p>
           </div>
         </ScrollReveal>
