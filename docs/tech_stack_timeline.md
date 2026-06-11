@@ -18,9 +18,10 @@ AIはここに記載された時期を無視した技術の先行投入・アー
 ## 2. Phase別 導入タイミング
 
 ### Phase 0 完了までに導入
-- Sentry(エラー監視)
-- GitHub Actions(Lint / Type Check の自動化)
-- Vitest / Playwright(フロントエンド・E2Eテスト環境構築)
+- Sentry（エラー監視）
+- GitHub Actions（Lint / Type Check の自動化）
+- Vitest / Playwright（フロントエンド・E2Eテスト環境構築）
+- JSON-LD構造化データ（LocalBusiness / JobPosting等。AI検索・LLMO対応をテナント標準機能とする）
 
 ### Phase 1 着手時（問い合わせ・予約リクエスト受付）
 - Supabase（書き込み処理の解禁）
@@ -37,7 +38,7 @@ AIはここに記載された時期を無視した技術の先行投入・アー
 - Go標準テスト（`testing`）
 
 ### Phase 2以降、必要になった時点で導入
-- Terraform（AWS/Fly.io構成管理が複雑化した時点）
+- Terraform（Phase 2で新規作成するリソース [Fly.io / S3 / CloudFront / Cloudflare] は最初からTerraformで構築する。Vercel / Supabase はダッシュボード管理のままとし、IaC化しない）
 - OpenTelemetry（分散トレーシングが必要になった時点）
 
 ### Phase 3 着手時（ネット予約）
@@ -62,6 +63,7 @@ AIはここに記載された時期を無視した技術の先行投入・アー
 AIは以下の技術について、明確な要件・運用上の必要性が発生するまで先行導入を提案しないこと。
 
 - **Redis（本番用途）**：Phase 2〜3では導入しない。ローカル開発用途の利用は妨げない
+- **Supabase読取り専用ロール**：AIエージェントにDB操作を任せる運用を開始する時点で必須化。それまでは作成しない
 - **GraphQL / gRPC**：フロントとバックエンドの通信は「RESTful API」で固定。スキーマ管理の学習コストを避ける
 - **React状態管理（Redux / Jotai / Zustand等）**：複雑なフォームが登場する「Phase 3以降」まで保留。標準のHooks(`useState`等)で十分
 - **架空のSLO / Runbook**：面接で逆効果になるため作成しない。実運用での障害発生時に実例ベースで作成する

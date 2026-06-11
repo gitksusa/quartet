@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import ScrollReveal from "@/components/recruit/ScrollReveal";
 import SectionHeading from "@/components/recruit/shared/SectionHeading";
 
@@ -19,11 +20,11 @@ export default function AccessBlock() {
               { dt: "住所", dd: <><W>〒350-0042</W> <W>埼玉県川越市中原町2-25-4</W><br /><W>ライラックヴィラⅠ番館302号室</W><div className="mt-2"><a href="https://maps.apple.com/?q=埼玉県川越市中原町2-25-4+ライラックヴィラ" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-[#8e735b]/70 hover:text-[#8e735b] underline"><svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25s-7.5-4.108-7.5-11.25a7.5 7.5 0 1115 0z" /></svg>iPhoneのマップはこちら</a></div></>},
               { dt: "アクセス", dd: <>
                 <div className="flex items-center gap-2 mb-2">
-                  <img src="/S__4096016_0.jpg" alt="西武線" className="w-[18px] h-[18px] md:w-5 md:h-5 object-cover rounded-sm flex-shrink-0" />
+                  <Image src="/S__4096016_0.jpg" alt="西武線" width={20} height={20} className="w-[18px] h-[18px] md:w-5 md:h-5 object-cover rounded-sm flex-shrink-0" />
                   <span><W>西武新宿線 本川越駅</W> <W>徒歩0分</W></span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <img src="/S__4096015_0.jpg" alt="東武線" className="w-[18px] h-[18px] md:w-5 md:h-5 object-cover rounded-sm flex-shrink-0" />
+                  <Image src="/S__4096015_0.jpg" alt="東武線" width={20} height={20} className="w-[18px] h-[18px] md:w-5 md:h-5 object-cover rounded-sm flex-shrink-0" />
                   <span><W>東武東上線 川越市駅</W> <W>徒歩5分</W></span>
                 </div>
               </> }
