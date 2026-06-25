@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import React from "react";
 import RecruitHeader from "@/components/recruit/RecruitHeader";
-import ScrollReveal from "@/components/recruit/ScrollReveal";
 import FloatingNav from "@/components/recruit/FloatingNav";
 
 // 💡 今回切り出した部品をインポートします
-import SectionHeading from "@/components/recruit/shared/SectionHeading";
 import FaqBlock from "@/components/recruit/blocks/FaqBlock";
 import StrengthsBlock from "@/components/recruit/blocks/StrengthsBlock";
 import HeroBlock from "@/components/recruit/blocks/HeroBlock";
@@ -38,10 +35,6 @@ function renderWrapped(text: string) {
     </span>
   ));
 }
-
-const W = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-block">{children}</span>
-);
 
 // ─── 募集要項データ ────────────────────────────────────────
 const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = [

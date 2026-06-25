@@ -43,6 +43,7 @@ AWS ECS Fargate / RDS PostgreSQL(Multi-AZ) / SSM Session Manager / Prometheus+Gr
 
 > Go API は中核として維持する（バックエンド/インフラの評価ポイントがここに集まるため）。
 > ただし重い処理だけ Go に寄せ、HP表示など軽い処理は Next.js 側で完結させてよい。
+※ 各技術の導入時期は `docs/tech_stack_timeline.md` を参照すること。記載時期より前の導入を提案する場合は、顧客価値・運用上の必要性を明示すること。
 
 ---
 
