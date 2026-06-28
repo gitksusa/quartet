@@ -1,44 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Quartet
 
-## Getting Started
+美容サロン・クリニック向けのマルチテナントWebサービス。テナントごとにHP・求人ページなどを提供する構成で開発している。
 
-First, run the development server:
+## 開発原則
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- 主要な設計判断はADRとして `docs/adr/` に記録する。
+- 障害対応や運用上の学びは記録として残す。
+- 実装速度より正確性・保守性を優先する。
+- 各フェーズで導入する技術とその理由は `docs/tech_stack_timeline.md` で管理する。
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## プロジェクト状況
 
-## Environment Variables
+現在 Phase 0(基盤構築)の段階。
+
+- 開発基盤(CI/CD・Branch Protection・Dependabot)を整備済み
+- マルチテナント構成での求人ページ機能を実装済み
+- サロンHP機能を実装中
+
+## 本番稼働状況
+
+現在、本番環境においてマルチテナント構成(`/[slug]/...`)による公開ページ配信を運用している。
+顧客情報保護のため、個別テナントの名称・URL・利用状況等は公開していない。
+
+## 技術スタック
+
+- **Frontend**: Next.js(App Router) / TypeScript / Tailwind CSS
+- **Backend / DB**: Supabase(PostgreSQL, Row Level Security)
+- **Infra / CI/CD**: Vercel / GitHub Actions(Lint・TypeCheck・Build) / Dependabot
+
+技術選定の方針、フェーズ別の導入計画、導入しない技術の判断基準は `docs/tech_stack_timeline.md` を参照。
+
+## 最近のリリース
+
+### v0.5.0
+- GitHub Actions導入(Lint / TypeCheck / Build)
+- Branch Protection設定
+- Dependabot導入(alerts / security updates)
+- `.env.example` 整備
+
+### v0.4.0
+- Supabaseクライアントの環境変数読み込みをFail-Fast化
+- 本番障害(500エラー)の調査・対応
+
+詳細な変更履歴は [GitHub Releases](https://github.com/gitksusa/quartet/releases) を参照。
+
+## 運用メモ
+
+過去の障害対応の記録は `docs/incidents/` を参照。
+
+- [INC-2026-06-001 Supabase環境変数未設定による本番500エラー](docs/incidents/INC-2026-06-001-supabase-env-missing.md)
+
+## ローカル開発
 
 \`\`\`bash
+npm install
 cp .env.example .env.local
+npm run dev
 \`\`\`
 
-Set your Supabase project values in `.env.local` before running the dev server.
+`.env.local` にSupabaseの値を設定してから起動する。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+品質チェック:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+\`\`\`bash
+npm run lint
+npm run type-check
+npm run build
+\`\`\`
 
-## Learn More
+PR作成時はGitHub Actionsで自動実行される。
 
-To learn more about Next.js, take a look at the following resources:
+## ドキュメント
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [`docs/architecture.md`](docs/architecture.md) — システム構成
+- [`docs/roadmap.md`](docs/roadmap.md) — 開発フェーズ計画
+- [`docs/tech_stack_timeline.md`](docs/tech_stack_timeline.md) — 技術導入方針
+- [`docs/learning/`](docs/learning/) — 開発記録・振り返り
+- [`docs/incidents/`](docs/incidents/) — 障害対応記録
+- [`docs/adr/`](docs/adr/) — 設計判断の記録
