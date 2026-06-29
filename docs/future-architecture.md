@@ -87,15 +87,25 @@
 - **依存**: 使用する外部リソース（CDN、画像、フォント等）のドメインリストの確定
 - **Authority**: `next.config.ts`
 
+### 1.7 PreToolUse Hooks による repository-map 強制適用
+
+- **何を追加するか**: Claude Code の `.claude/settings.json` に `PreToolUse` フックを設定し、`src/` 配下への Edit/Write 実行前に `docs/repository-map.md` の該当カテゴリ内容を `additionalContext` として強制注入する
+- **なぜ今は存在しないか**: `docs/repository-map.md` の Must/Watch 項目の粒度がまだ運用未検証（手動運用テストが先）。検証前にフックで自動強制すると、誤った粒度を機械的に固定するリスクがある。また、ファイルパス→カテゴリの判定ロジック（シェルスクリプト）の実装コストも発生する。
+- **追加トリガー**: (a) 手動運用テスト（次回HP実装タスク）で Must/Watch の粒度が妥当と確認された後、(b) CLAUDE.mdへの「コード変更時の必須プロトコル」追加後、(c) Claude Codeでの実装作業が定常化した時
+- **依存**: CLAUDE.mdへのプロトコル追加（プロンプトベースでの運用が先に確立すること）
+- **Authority**: `.claude/settings.json` + `.claude/hooks/` 配下のスクリプト群
+
 ---
 
-## 2. Phase 1: フォーム受付・通知
+## 2. Phase 0b（前倒し） / Phase 1
+
+下記 2.1～2.4 は Phase 0b（簡易CMS・テナント管理画面）として前倒し実装された。記録は保存価値のあるため残す。 2.5 のみ本来の Phase 1 対象。
 
 ### 2.1 Zod（または同等の runtime validation）
 
 - **何を追加するか**: フォーム入力 / API リクエスト / 環境変数の runtime validation ライブラリ
-- **なぜ今は存在しないか**: Phase 0 の HP には入力フォームが無いため、validation が不要。
-- **追加トリガー**: 予約リクエストフォーム実装着手時
+- **なぜ前倒ししたか**: 当初は Phase 1 で導入予定だったが、Phase 0b の Lite CMS 管理画面フォームも構造的に複雑なため前倒し。
+- **追加トリガー**: Phase 0b の Lite CMS 管理画面フォーム実装着手時（前倒し済み）
 - **依存**: フォーム実装方針の確定（React Hook Form 等と組み合わせるか）
 - **Authority**: 各 schema ファイル（`src/lib/validation/` 配下を想定）
 
@@ -110,8 +120,8 @@
 ### 2.3 `src/lib/auth/`
 
 - **何を追加するか**: WorkOS AuthKit との接続・セッション管理のラッパー
-- **なぜ今は存在しないか**: Phase 0 では認証が不要。求人ページ・HPは public access。
-- **追加トリガー**: 顧客アカウントまたは管理画面実装着手時
+- **なぜ前倒ししたか**: Phase 0a では認証が不要だった（求人ページ・HPは public access）。Phase 0b でテナントが自分の管理画面にログインする要件が生じたため前倒し。
+- **追加トリガー**: Phase 0b のテナント管理画面実装着手時（前倒し済み）
 - **依存**: WorkOS AuthKit のテナント設定確定
 - **Authority**: `src/lib/auth/`
 
@@ -119,7 +129,7 @@
 
 - **何を追加するか**: テナント識別・境界保証のヘルパー（slug → tenant_id 解決、認可チェック等）
 - **なぜ今は存在しないか**: 現状は `[slug]/recruit/page.tsx` 内で個別実装。テナントごとの分岐ロジックがまだ単純。
-- **追加トリガー**: 2画面以上でテナント境界を確認する必要が出た時、または認証と組み合わせる時
+- **追加トリガー**: Phase 0b の認証導入と同時（前倒し済み）
 - **依存**: 認証戦略の確定（`src/lib/auth/` と並行）
 - **Authority**: `src/lib/tenant/`
 

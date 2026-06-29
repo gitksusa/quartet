@@ -117,7 +117,8 @@ AWS ECS Fargate / RDS PostgreSQL(Multi-AZ) / SSM Session Manager / Prometheus+Gr
 ## 3. プロダクト・ロードマップ（機能を作る順序 — これを厳守）
 
 ```
-Phase 0 : enu HP                         ← 今ここ
+Phase 0a: enu HP（静的実装）                                          ← 完了
+Phase 0b: Lite CMS・テンプレート選択・テナント管理画面・認証（WorkOS AuthKit）  ← 今ここ
 Phase 1 : 問い合わせ / 予約リクエスト受付（DB保存→通知メール・薄いNext.js API+Supabase・予約は自動確定しない）
 --- ビジネス判断（開発タスクではない）: 2店舗目の見込み判定。確定ならHP→予約／未定なら即予約。返事待ちで開発を止めない ---
 Phase 2 : 予約基盤  reservation-domain → reservation-api → reservation-admin（管理画面でリクエストを確認・確定）
@@ -133,6 +134,12 @@ Phase 6+: カルテ → 共通化分析 → page_blocks → template → block e
 - **page_blocks / テンプレート / ブロックエディタは最後**。実店舗を2〜3件作って共通項が見えるまで作らない。
 - **早すぎる抽象化は禁止。** 実例が2つ揃う前に共通化・スキーマ化しない。
 
+- **Phase 0b の新設（2026-06）**: enu HP（Phase 0a）の静的実装完了・本番稼働を受け、テンプレート化・Lite CMS・テナント管理画面・認証を Phase 0b として新設する。
+  - 前倒し：簡易CMS（テンプレートベース）、テナントログイン・管理画面（WorkOS AuthKit、`src/lib/auth/`・`src/lib/tenant/` の前倒し実装）。
+  - 後回し（変更なし）：ブロックの自由配置・並べ替え・ON/OFF編集（フルのブロックエディタ）は Phase 6+ のまま。
+  - **既存の enu 求人ページ（本番公開済み・応募受付中）をテンプレート化・Lite CMS化する際は、無停止・データ無欠損で移行する。** 詳細は「4. HP実装方針」を参照。
+  - 詳細は `.claude/playbooks/content-image-policy.md` を参照。
+
 ### 判断軸（What と How を分離）
 - **何を作るか（順序）= 顧客価値**で決める。
 - **どう作るか（実装品質）= ポートフォリオ価値**で決める（マルチテナント・認可・監査ログ・テスト等）。
@@ -143,6 +150,13 @@ Phase 6+: カルテ → 共通化分析 → page_blocks → template → block e
 
 - HP は**綺麗に props 化した React コンポーネント**で作る（`<HeroSection />` `<MenuSection />` 等）。
 - **JSON schema 駆動・content JSONB からの動的描画にしない**（v1では早すぎる）。
+
+  > ※ 禁止しているのは**「ランタイムでレイアウトを解釈する汎用 JSON Schema UI（Generic Schema Renderer）」**である。
+  > Phase 0 の簡易CMSは、事前定義された5テンプレートの**テンプレートコンテンツエディタ（Template Content Editor）**であり、この禁止事項には該当しない。
+
+- **テンプレート構成は5パターンから選択する**（参考サイト5件の構成分析に基づく。タブ内容・ページ内項目順序の組み合わせ）。テンプレートはコンポーネントの組み合わせとして実装し、JSON schemaは使わない。
+- **簡易CMS（Lite CMS）を Phase 0 に含める**：テナント管理者がテキスト・画像を管理画面から編集できる。ただし**ドラッグ＆ドロップによる並べ替え・ブロックのON/OFF自由配置**は対象外（Phase 6+ のブロックエディタで実装）。テキスト・画像は Supabase に保存し、ページ表示時に props として各コンポーネントへ渡す。
+- **画像の分類ルール（背景・雰囲気画像 / 実写コンテンツ / 施術結果画像）の詳細は `.claude/playbooks/content-image-policy.md` を Source of Truth とする**（景品表示法の優良誤認リスク対応）。
 - セクションの ON/OFF は **`tenants.is_recruit_enabled` 等の既存 boolean フラグ**で制御する。
 - **ルール：2個目のトグル（例 `is_menu_enabled`）が必要になった瞬間**に、boolean増殖か `homepage_config jsonb` への移行かを検討する。今は `is_recruit_enabled` だけでよい。それまで新しい設定構造を作らない。
 - 求人ページは独立機能ではなく「HPを構成する1ブロック（ON/OFF可）」として扱う。
