@@ -87,6 +87,14 @@
 - **依存**: 使用する外部リソース（CDN、画像、フォント等）のドメインリストの確定
 - **Authority**: `next.config.ts`
 
+### 1.7 PreToolUse Hooks による repository-map 強制適用
+
+- **何を追加するか**: Claude Code の `.claude/settings.json` に `PreToolUse` フックを設定し、`src/` 配下への Edit/Write 実行前に `docs/repository-map.md` の該当カテゴリ内容を `additionalContext` として強制注入する
+- **なぜ今は存在しないか**: `docs/repository-map.md` の Must/Watch 項目の粒度がまだ運用未検証（手動運用テストが先）。検証前にフックで自動強制すると、誤った粒度を機械的に固定するリスクがある。また、ファイルパス→カテゴリの判定ロジック（シェルスクリプト）の実装コストも発生する。
+- **追加トリガー**: (a) 手動運用テスト（次回HP実装タスク）で Must/Watch の粒度が妥当と確認された後、(b) CLAUDE.mdへの「コード変更時の必須プロトコル」追加後、(c) Claude Codeでの実装作業が定常化した時
+- **依存**: CLAUDE.mdへのプロトコル追加（プロンプトベースでの運用が先に確立すること）
+- **Authority**: `.claude/settings.json` + `.claude/hooks/` 配下のスクリプト群
+
 ---
 
 ## 2. Phase 1: フォーム受付・通知
