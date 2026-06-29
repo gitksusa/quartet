@@ -34,3 +34,4 @@ CLAUDE.md 本体に各 playbook の `Review trigger` を記載している。
 | `reservation-api.md` | Deferred | Medium | Phase 2 開始時 |
 | `domain-boundary.md` | Active | High | 常時遵守（憲法） |
 | `external-integration.md` | Deferred | Medium | Phase 4 開始時 |
+| `content-image-policy.md` | Active | High | 画像取得手段追加・Before/After機能追加時 |
