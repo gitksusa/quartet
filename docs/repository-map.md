@@ -151,6 +151,8 @@ AIエージェント（Claude Code, Cursor 等）が、Quartetの規範・設計
 - `src/app/globals.css`
 - `src/app/favicon.ico`
 - `src/app/[slug]/recruit/page.tsx` (テナント別求人ページ)
+- `src/app/sitemap.ts` (検索エンジン向けサイトマップ生成。is_recruit_enabled テナントを動的に列挙)
+- `src/app/robots.ts` (クローラー制御。全 UA 許可 + sitemap URL 指定)
 
 ### Authority
 
