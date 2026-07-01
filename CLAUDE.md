@@ -257,6 +257,10 @@ develop → main      : Pull Request 必須・Squash and Merge
 - 全デプロイは GitHub Actions 経由のみ（直接 push 禁止）。develop→staging、main→prod。
 - コード全体を共有する時は Repomix を使う。
 
+### 運用アラート（トリガー式）
+
+- **Vercel を Pro プランに移行するタイミング（商用化等）で、必ず Vercel の Anomaly Alerts（使用量異常検知通知）を有効化する。** 理由：クライアントサイドの useEffect 依存配列ミス等による無限リクエスト事故は、無料プラン（Hobby）では自動検知手段がなく、手動確認に頑ると発見が遅れて高額課金につながるリスクがある（2026-07 の他者事故事例を参照して確認済み）。
+
 ---
 
 ## 11. 禁止事項（やってはいけないこと）
