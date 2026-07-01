@@ -116,9 +116,9 @@ JWT には `workos_user_id` だけ含め、アプリ層で `tenant_users` を都
 
 ## 4. RLS 設計
 
-### 4.1 RLS で使用する auth 関数
+### 4.1 RLS / アプリ層で使用する認可補助関数
 
-write policy は以下の 2関数に依存する。いずれも認証実装フェーズで実装・テスト済みになってから適用する。
+write policy は ①② の2関数に依存する。③は RLS から呼ばず、Next.js アプリ層から tenant_id 解決のために呼び出す RPC 関数である。いずれも認証実装フェーズで実装・テスト済みになってから適用する。
 
 **① `auth.current_workos_user_id()`**
 WorkOS JWT から `workos_user_id` を取得する関数。セクション3の方針（JWT には workos_user_id のみ含め、tenant_id はアプリ層で解決）に従い、この関数が JWT の直接の読み取り役を担う。具体的な実装方法（JWT クレームから読む Supabase 関数として実装するのか等）は WorkOS の仕様確認後に認証実装フェーズで確定する。
@@ -141,6 +141,14 @@ $$;
 
 **`auth.current_tenant_id()` について**
 `database.md` セクション2.1 に定義があるが、Phase 0b の write policy では使用しない。将来 admin/staff ロールの write policy を追加する際や、JWT に tenant_id を含めるアーキテクチャに移行する際に再検討する（auth-tenant-access-control.md Review trigger 参照）。
+
+**③ `public.get_tenant_id_for_workos_user(p_workos_user_id text)` — アプリ層 RPC 専用・SECURITY DEFINER 関数**
+`0003_tenant_lookup_function.sql` で定義する。①② と異なり RLS ポリシーから呼ばれるのではなく、Next.js の `src/lib/tenant/` から `supabase.rpc()` で呼び出すアプリ層専用関数。`workos_user_id` を受け取り `tenant_id` を返す（①② とは入出力が逆）。
+
+- **anon ロールへの EXECUTE 付与の理由**: Next.js の Supabase server client は anon キーで接続するため（WorkOS セッションは Supabase Auth とは独立）。
+- **呼び出し元の必須制約**: `p_workos_user_id` には必ず WorkOS の検証済みサーバーセッション（`withAuth()` の返却値）から取得した値を渡すこと。クライアント入力・URL パラメータ・ブラウザ状態・ログ由来の値を絶対に渡してはならない。関数自体は呼び出し元が当該 workos_user_id の本人かを検証しない。
+- **リスクの範囲**: 仮に第三者が有効な workos_user_id を知っていたとしても、取得した tenant_id だけではデータ書き込みはできない（write policy が守る）。workos_user_id はブルートフォース列挙が非現実的な不透明文字列。
+- **将来の移行余地**: Supabase Auth と WorkOS を統合する場合、EXECUTE を `authenticated` のみに限定できる（セクション6「将来に回す」参照）。
 
 ### 4.2 公開HP表示用 read policy（3テーブル共通方針）
 
@@ -242,6 +250,12 @@ Supabase RLS      ← auth.is_tenant_owner() でテナント所属 + role = 'own
 `src/lib/tenant/` が `src/lib/auth/` に依存することは許容する（下流→上流の参照）。
 逆方向（`src/lib/auth/` が `src/lib/tenant/` に依存）は禁止。
 
+### 実装上の制約：クライアントサイドでの呼び出し禁止
+
+`src/lib/tenant/`（workos_user_id → tenant_id の解決）は、Server Component または Route Handler 内でのみ呼び出す。Client Component の useEffect 内でこの解決処理を行ってはならない。
+
+理由: 依存配列の設定を誤ると（例: 解決結果をstateに入れ、そのstateを依存配列に含めてしまう等）、無限レンダリングループが発生し、Supabaseへのリクエストが際限なく発行される事故につながる。RLSで守られているとはいえ、リクエスト数自体の高騰（レイテンシ・レート制限・コスト）を防ぐため、この解決処理はサーバーサイドに閉じる。
+
 ---
 
 ## 6. Phase 0b で実装する範囲 / 将来に回す範囲
@@ -260,7 +274,7 @@ Supabase RLS      ← auth.is_tenant_owner() でテナント所属 + role = 'own
 ### 将来に回す
 
 - `admin` / `staff` ロールの write policy 実装（実際のニーズが出てから）
-- 1ユーザーが複数テナントを持つケースの実装（テナント切り替えUI等）
+- 1ユーザーが複数テナントを持つケースの実装（テナント切り替えUI等）。実装時は `public.get_tenant_id_for_workos_user()` の `LIMIT 1`（Phase 0b の1ユーザー=1テナント前提による）を複数テナント対応の設計に置き換えること（`0003_tenant_lookup_function.sql` 参照）
 - JWT へのカスタムクレーム（tenant_id）埋め込み（スケールした時点で検討）
 - 顧客向けアカウント（サロン利用者のアカウント）は Phase 3 以降
 

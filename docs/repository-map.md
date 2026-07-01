@@ -392,6 +392,7 @@ UI の見た目と振る舞いをカプセル化する。ビジネスロジッ�
 
 - `docs/db/migrations/0001_hp_template_system.sql` (HP テンプレートシステム DDL。今すぐ Supabase SQL Editor から実行可能)
 - `docs/db/migrations/0002_rls_write_policy.sql` (管理 write policy。WorkOS AuthKit 認証実装フェーズ完了後に適用)
+- `docs/db/migrations/0003_tenant_lookup_function.sql` (アプリ層向け workos_user_id → tenant_id 解決RPC。PR2の認証・テナント解決実装と合わせて適用)
 - `docs/design/hp-db-schema.md` (HP DB スキーマ設計)
 - `docs/design/auth-tenant-access-control.md` (認証・テナントアクセス制御設計)
 - `docs/design/hp-template-patterns.md` (HP テンプレートパターン定義)
@@ -413,12 +414,13 @@ DB スキーマの変更履歴を SQL ファイルで管理し、Supabase SQL Ed
 - 新しい migration ファイルを作成する前に、適用順序（前提 migration の番号）を確認し、ヘッダーに「前提条件」を明記する。
 - RLS を有効化したテーブルには必ず policy を設ける。「RLS 有効・policy なし」を意図的に選ぶ場合はコメントで理由を明記する（`0001` の `tenant_users` パターン参照）。
 - `DROP` / `TRUNCATE` を含む destructive 変更は別 migration で管理し、ファイル名にも明示する。
-- SECURITY DEFINER 関数（`auth.is_tenant_owner()` 等）を変更する場合は、EXECUTE 権限の絞り込み（`REVOKE FROM PUBLIC; GRANT TO authenticated`）を必ず同時に適用する。
+- SECURITY DEFINER 関数（`auth.is_tenant_owner()` / `public.get_tenant_id_for_workos_user()` 等）を変更する場合は、EXECUTE 権限の絞り込み（`REVOKE FROM PUBLIC; 必要なロールへのみ GRANT`）を必ず同時に適用する。
 
 #### Watch
 
 - 現状 migration は手動適用（Supabase SQL Editor）。適用済みかどうかの追跡は各ファイル内の「実行後確認 SQL」で行う。将来 migration 管理ツール（dbmate 等）を導入する場合は `docs/future-architecture.md` に追記。
 - `0002_rls_write_policy.sql` は `auth.current_workos_user_id()` 関数に依存する。この関数が未実装の間は適用しない（WorkOS AuthKit 認証実装フェーズを待つ）。
+- `0003_tenant_lookup_function.sql` は anon 実行可能な SECURITY DEFINER RPC。`workos_user_id` は必ず検証済みWorkOSサーバーセッション由来の値を渡し、クライアント入力・URL・ブラウザ状態由来の値を渡さない。
 - `tenant_users` への write policy は Phase 0b では作成しない（service_role 経由のみ）。将来の統合業務管理ドメインで別途設計する（`docs/future-architecture.md` セクション5.2 参照）。
 
 ---
