@@ -2,7 +2,7 @@
 
 **Status**: Active
 **Owner**: k susa
-**Last validated**: 2026-06-29
+**Last validated**: 2026-07-01
 
 ## このドキュメントについて
 
@@ -383,6 +383,43 @@ UI の見た目と振る舞いをカプセル化する。ビジネスロジッ�
 
 - learning と issues の境界が曖昧になりやすい。`learning/` = 学んだこと、`issues/` = 未解決の検討事項、と分けると整理しやすい。
 - 古くなった learning 記事をアーカイブする運用を Phase 2 以降で検討。
+
+---
+
+## 11. DB Migrations & Design
+
+### 現存ファイル/ディレクトリ
+
+- `docs/db/migrations/0001_hp_template_system.sql` (HP テンプレートシステム DDL。今すぐ Supabase SQL Editor から実行可能)
+- `docs/db/migrations/0002_rls_write_policy.sql` (管理 write policy。WorkOS AuthKit 認証実装フェーズ完了後に適用)
+- `docs/design/hp-db-schema.md` (HP DB スキーマ設計)
+- `docs/design/auth-tenant-access-control.md` (認証・テナントアクセス制御設計)
+- `docs/design/hp-template-patterns.md` (HP テンプレートパターン定義)
+
+### Authority
+
+- 各 migration ファイルが **その変更の単一の真実**。番号は変えない。
+- `docs/design/` 配下の各ファイルが個別 authority を持つ。DB 規約（UUID PK・部分一意インデックス等）の単一の真実は `docs/database.md`。
+
+### 責務
+
+DB スキーマの変更履歴を SQL ファイルで管理し、Supabase SQL Editor からの手動適用で再現性を保証する。`docs/design/` はその migration が依拠する設計判断を保持する。
+
+### 編集・追加時のチェック項目
+
+#### Must
+
+- migration ファイルは **追記のみ**。適用済みファイルを後から書き換えない。変更が必要な場合は新しい番号のファイルを作成する。
+- 新しい migration ファイルを作成する前に、適用順序（前提 migration の番号）を確認し、ヘッダーに「前提条件」を明記する。
+- RLS を有効化したテーブルには必ず policy を設ける。「RLS 有効・policy なし」を意図的に選ぶ場合はコメントで理由を明記する（`0001` の `tenant_users` パターン参照）。
+- `DROP` / `TRUNCATE` を含む destructive 変更は別 migration で管理し、ファイル名にも明示する。
+- SECURITY DEFINER 関数（`auth.is_tenant_owner()` 等）を変更する場合は、EXECUTE 権限の絞り込み（`REVOKE FROM PUBLIC; GRANT TO authenticated`）を必ず同時に適用する。
+
+#### Watch
+
+- 現状 migration は手動適用（Supabase SQL Editor）。適用済みかどうかの追跡は各ファイル内の「実行後確認 SQL」で行う。将来 migration 管理ツール（dbmate 等）を導入する場合は `docs/future-architecture.md` に追記。
+- `0002_rls_write_policy.sql` は `auth.current_workos_user_id()` 関数に依存する。この関数が未実装の間は適用しない（WorkOS AuthKit 認証実装フェーズを待つ）。
+- `tenant_users` への write policy は Phase 0b では作成しない（service_role 経由のみ）。将来の統合業務管理ドメインで別途設計する（`docs/future-architecture.md` セクション5.2 参照）。
 
 ---
 
