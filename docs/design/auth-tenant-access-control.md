@@ -256,6 +256,20 @@ Supabase RLS      ← auth.is_tenant_owner() でテナント所属 + role = 'own
 
 理由: 依存配列の設定を誤ると（例: 解決結果をstateに入れ、そのstateを依存配列に含めてしまう等）、無限レンダリングループが発生し、Supabaseへのリクエストが際限なく発行される事故につながる。RLSで守られているとはいえ、リクエスト数自体の高騰（レイテンシ・レート制限・コスト）を防ぐため、この解決処理はサーバーサイドに閉じる。
 
+### Phase 0b の tenant 所属解決方針
+
+`src/lib/tenant/` の `workos_user_id → tenant_id` 解決に関し、以下の方針を PR2 実装の拘束条件とする。
+
+**前提**: Phase 0b では 1 WorkOS user = 1 active tenant（`role = 'owner'` かつ `deleted_at IS NULL`）を前提とする。
+
+**解決手段**: `0003_tenant_lookup_function.sql` で定義した `public.get_tenant_id_for_workos_user()` RPC 経由のみで `tenant_id` を解決する。service_role は使わない。アプリコード側で独自に `LIMIT 1` を書いて黙って選ぶ実装は禁止する。
+
+**0件の場合（tenant 未所属）**: エラーとして扱い、案内画面またはエラーレスポンスへ誘導する。黙って続行しない。
+
+**2件以上の場合**: Phase 0b では未対応のデータ整合性違反として扱う。現行 RPC は `tenant_id` を1件返す設計のため、ランタイムでの2件以上の検出は PR2 では行わない。検出は `0003_tenant_lookup_function.sql` の実行後確認 [確認4]（`GROUP BY workos_user_id HAVING COUNT(DISTINCT tenant_id) > 1`）で手動実施する。
+
+**将来**: 複数テナント切り替え UI を実装する時点で、`public.get_tenant_id_for_workos_user()` を tenant 一覧を返す RPC に置き換える（`0003_tenant_lookup_function.sql` の LIMIT 1 制約を解消する）。
+
 ---
 
 ## 6. Phase 0b で実装する範囲 / 将来に回す範囲
