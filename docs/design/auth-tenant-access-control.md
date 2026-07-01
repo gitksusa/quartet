@@ -25,16 +25,17 @@ WorkOS AuthKit による認証と、マルチテナントのアクセス制御�
 ```
 WorkOS（認証主体）
     |
-    | JWT（workos_user_id + tenant_id を含む）
+    | JWT（workos_user_id のみ含む。tenant_id は JWT に含めない）
     v
 src/lib/auth/          ← WorkOSとの接続・JWTの検証・セッション管理
-    |
+    |                     workos_user_id を取得する
+    | workos_user_id
     v
-src/lib/tenant/        ← tenant_id の解決・テナント境界の保証
-    |
+src/lib/tenant/        ← tenant_users を参照して workos_user_id → tenant_id を解決
+    |                     テナント境界チェック・現在の tenant_id をセッションに設定
     v
-Supabase RLS           ← auth.current_tenant_id() でテナントスコープを強制
-    |
+Supabase RLS           ← auth.is_tenant_owner() でテナント所属 + role = 'owner' を確認
+    |                     （auth.current_workos_user_id() + tenant_users への直接スキャン）
     v
 tenant_sections / tenant_images / tenant_site_settings
 ```
@@ -42,6 +43,7 @@ tenant_sections / tenant_images / tenant_site_settings
 **コンテンツのSSOTはSupabaseテーブルであり、アクセス制御の最終防衛線はRLS。**
 アプリ層（`src/lib/auth/` / `src/lib/tenant/`）は利便性とDXのためのラッパーであり、
 RLSを迂回する設計にしてはならない。
+JWT には `workos_user_id` のみを含め、`tenant_id` はアプリ層で `tenant_users` を都度参照して解決する（セクション3参照）。
 
 ---
 
@@ -114,62 +116,83 @@ JWT には `workos_user_id` だけ含め、アプリ層で `tenant_users` を都
 
 ## 4. RLS 設計
 
-### 4.1 `auth.current_tenant_id()` 関数
+### 4.1 RLS で使用する auth 関数
 
-CLAUDE.md セクション6に記載の通り、RLSポリシーは `auth.current_tenant_id()` を使って tenant_id をセッションから取得する。この関数は WorkOS JWT のクレームまたはSupabaseセッション変数から tenant_id を抽出する想定。具体的な実装は認証実装フェーズで確定する。
+write policy は以下の 2関数に依存する。いずれも認証実装フェーズで実装・テスト済みになってから適用する。
+
+**① `auth.current_workos_user_id()`**
+WorkOS JWT から `workos_user_id` を取得する関数。セクション3の方針（JWT には workos_user_id のみ含め、tenant_id はアプリ層で解決）に従い、この関数が JWT の直接の読み取り役を担う。具体的な実装方法（JWT クレームから読む Supabase 関数として実装するのか等）は WorkOS の仕様確認後に認証実装フェーズで確定する。
+
+**② `auth.is_tenant_owner(target_tenant_id uuid)` — SECURITY DEFINER 関数**
+`0002_rls_write_policy.sql` で定義する。`auth.current_workos_user_id()` で得た workos_user_id を使い、`tenant_users` テーブルへの直接スキャン（RLS バイパス）で「テナント所属 + role = 'owner'」を確認する。SECURITY DEFINER で実行することで、write policy の USING/WITH CHECK 式から tenant_users を参照する際の RLS 再帰評価を回避する。
+
+```sql
+CREATE OR REPLACE FUNCTION auth.is_tenant_owner(target_tenant_id uuid)
+RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.tenant_users
+    WHERE tenant_id      = target_tenant_id
+      AND workos_user_id = auth.current_workos_user_id()
+      AND role           = 'owner'
+      AND deleted_at     IS NULL
+  );
+$$;
+```
+
+**`auth.current_tenant_id()` について**
+`database.md` セクション2.1 に定義があるが、Phase 0b の write policy では使用しない。将来 admin/staff ロールの write policy を追加する際や、JWT に tenant_id を含めるアーキテクチャに移行する際に再検討する（auth-tenant-access-control.md Review trigger 参照）。
 
 ### 4.2 公開HP表示用 read policy（3テーブル共通方針）
 
 対象ロール: `anon`（未認証の公開アクセス）
 
+`0001_hp_template_system.sql` で適用済み（ポリシー名は以下の通り）。
+
 ```sql
--- tenant_sections の read policy（想定）
-CREATE POLICY "public_read_visible_sections"
-ON tenant_sections FOR SELECT
-TO anon
-USING (is_visible = true);
+-- tenant_site_settings: 全行公開
+CREATE POLICY "tenant_site_settings_public_read"
+ON public.tenant_site_settings FOR SELECT TO anon USING (true);
 
--- tenant_images の read policy（想定）
-CREATE POLICY "public_read_images"
-ON tenant_images FOR SELECT
-TO anon
-USING (deleted_at IS NULL);
+-- tenant_sections: 表示中のセクションのみ公開
+CREATE POLICY "tenant_sections_public_read"
+ON public.tenant_sections FOR SELECT TO anon USING (is_visible = true);
 
--- tenant_site_settings の read policy（想定）
-CREATE POLICY "public_read_site_settings"
-ON tenant_site_settings FOR SELECT
-TO anon
-USING (true);  -- 全行。tenant_site_settingsはテナントスコープ内で全て公開でよい
+-- tenant_images: ソフトデリートされていない画像のみ公開
+CREATE POLICY "tenant_images_public_read"
+ON public.tenant_images FOR SELECT TO anon USING (deleted_at IS NULL);
 ```
-
-**これらはまだ実行しない。認証実装フェーズで確定・適用する。**
 
 ### 4.3 管理画面用 write policy
 
-対象ロール: 認証済みユーザーのうち、当該 tenant_id の `owner`（または将来の `admin`）
+対象ロール: authenticated（WorkOS AuthKit でログイン済みユーザー）のうち role = 'owner' のみ
+
+`0002_rls_write_policy.sql` で適用する（WorkOS AuthKit 認証実装フェーズ完了後）。
 
 ```sql
--- tenant_sections の write policy（想定）
-CREATE POLICY "owner_write_sections"
-ON tenant_sections FOR ALL
+-- 代表例: tenant_sections の write policy
+CREATE POLICY "tenant_sections_owner_all"
+ON public.tenant_sections FOR ALL
 TO authenticated
-USING (tenant_id = auth.current_tenant_id())
-WITH CHECK (tenant_id = auth.current_tenant_id());
+USING     (auth.is_tenant_owner(tenant_id))
+WITH CHECK (auth.is_tenant_owner(tenant_id));
 
--- tenant_images / tenant_site_settings も同様の方針
+-- tenant_site_settings / tenant_images も同じパターン
+-- tenant_users への write policy は設けない（write は service_role のみ。
+-- 理由: docs/future-architecture.md 5.2 経営管理ドメイン参照）
 ```
+
+`auth.is_tenant_owner()` が workos_user_id・role・deleted_at を一括確認するため、将来 staff/admin が `tenant_users` に追加されても意図せず書き込み権限を持たない。
 
 **この write policy は WorkOS AuthKit によるテナント認証が完成して初めて意味を持つ。**
 現時点では書き込みは service_role 経由（開発者操作）のみ。
-エンドユーザー向けの write policy は認証実装フェーズで有効化する。
 
 ### 4.4 read / write の分離原則
 
 | 操作 | ロール | 条件 |
 |------|--------|------|
 | 公開HP表示 (SELECT) | `anon` | `is_visible = true` / `deleted_at IS NULL` |
-| 管理画面表示 (SELECT) | `authenticated` | `tenant_id = auth.current_tenant_id()` |
-| コンテンツ編集 (INSERT/UPDATE/DELETE) | `authenticated` | `tenant_id = auth.current_tenant_id()` かつ `role = 'owner'`（Phase 0b） |
+| 管理画面表示 (SELECT) | `authenticated` | `auth.is_tenant_owner(tenant_id)` = true |
+| コンテンツ編集 (INSERT/UPDATE/DELETE) | `authenticated` | `auth.is_tenant_owner(tenant_id)` = true（role = 'owner' を関数内で確認） |
 | 開発者操作 | `service_role` | RLS bypass（本番では厳重管理） |
 
 ---
@@ -213,7 +236,7 @@ src/lib/auth/     ← WorkOS SDK に依存
 src/lib/tenant/   ← Supabase（tenant_users テーブル）に依存
     |
     v（tenant_id をセッションに設定）
-Supabase RLS      ← auth.current_tenant_id() でスコープ強制
+Supabase RLS      ← auth.is_tenant_owner() でテナント所属 + role = 'owner' を確認
 ```
 
 `src/lib/tenant/` が `src/lib/auth/` に依存することは許容する（下流→上流の参照）。
@@ -245,10 +268,9 @@ Supabase RLS      ← auth.current_tenant_id() でスコープ強制
 
 ## 未決事項
 
-### `auth.current_tenant_id()` の具体的な実装方法
+### JWT に `tenant_id` を直接含める方式への移行（将来検討）
 
-WorkOS JWT のクレームから取得するか、Supabase セッション変数から取得するか、
-`tenant_users` を毎回引くか。認証実装フェーズで WorkOS の仕様を確認した上で確定する。
+Phase 0b では `auth.current_workos_user_id()` + `auth.is_tenant_owner()` 方式を採用しており（セクション3・4.1参照）、この項目は現在の実装には影響しない。将来、スケールアップにより JWT に `tenant_id` カスタムクレームを直接埋め込む方式へ移行する場合に、`auth.current_tenant_id()` の実装方法（JWT クレームから取得するか、Supabase セッション変数から取得するか）を改めて検討する。
 
 ### 管理画面URLの設計（`/admin/[slug]/` か `/dashboard/` か）
 
