@@ -14,3 +14,22 @@ export class TenantNotFoundError extends Error {
     this.workosUserId = workosUserId
   }
 }
+
+/**
+ * URL の tenantSlug が、認証済みユーザーの所属テナントの slug と一致しないことを示すエラー。
+ * PR3 の /admin/[tenantSlug]/layout.tsx では notFound() へ変換する
+ * （情報漏洩を避けるため、レスポンスにこのエラーメッセージをそのまま含めない）。
+ * PR4 以降で Server Action / Route Handler からも throw する経路が増えた時点で、
+ * 403 相当の返却などの記述を追記する。
+ */
+export class TenantAccessDeniedError extends Error {
+  readonly tenantId: string
+  readonly requestedSlug: string
+
+  constructor(tenantId: string, requestedSlug: string) {
+    super('Tenant slug mismatch for the current user.')
+    this.name = 'TenantAccessDeniedError'
+    this.tenantId = tenantId
+    this.requestedSlug = requestedSlug
+  }
+}
