@@ -26,8 +26,12 @@
 --     classification / role はすべて text 型で保持し、アプリ層（Zod）でバリデーション
 --
 -- 【前提（実行前に確認）】
---   1. update_updated_at_column() 関数が存在すること（database.md セクション1.2）
---   2. public.tenants テーブルが存在すること
+--   1. public.tenants テーブルが存在すること
+--
+-- 【備考: 共通トリガー関数について】
+--   本ファイル自身が public.update_updated_at_column() を作成する（0 節）。
+--   Supabase 既定の storage.update_updated_at_column() に依存させない理由は
+--   0 節の直前コメント参照。
 -- ================================================================
 
 
@@ -35,8 +39,23 @@
 -- 実行前確認 SQL（Supabase SQL Editor で一行ずつ確認してから本体を流す）
 -- ================================================================
 
--- [前提確認 1] update_updated_at_column() の存在
--- SELECT proname, prosrc FROM pg_proc WHERE proname = 'update_updated_at_column';
+-- [前提確認 1] public.update_updated_at_column() が未作成であることの確認
+--   本 migration の 0 節は CREATE FUNCTION（OR REPLACE なし）のため、同名・同一
+--   引数シグネチャ（引数なし）の関数が public に既に存在すると衝突エラーで停止する。
+--   それが期待挙動。引数ありの同名オーバーロードは衝突しない。
+--   確認方針:
+--     - public に arguments が空の行がなければ OK。それ以外の同名オーバーロード
+--       （引数ありの同名関数）がある場合も、念のため既存定義を確認する。
+--     - 同名オーバーロードを区別できるよう arguments / result_type も表示する。
+-- SELECT n.nspname, p.proname,
+--        pg_get_function_identity_arguments(p.oid) AS arguments,
+--        pg_get_function_result(p.oid) AS result_type
+-- FROM pg_proc p
+--   JOIN pg_namespace n ON p.pronamespace = n.oid
+-- WHERE p.proname = 'update_updated_at_column'
+--   AND n.nspname IN ('public', 'storage');
+-- ↑ public に arguments が空の行がなければ OK（引数ありの同名オーバーロードは無害）。
+--   storage 行の有無は本 migration の実行可否に影響しない。
 
 -- [前提確認 2] tenants テーブルの存在
 -- SELECT count(*) FROM public.tenants;
@@ -47,6 +66,33 @@
 --   AND table_name IN (
 --     'tenant_users', 'tenant_site_settings', 'tenant_sections', 'tenant_images'
 --   );
+
+
+-- ================================================================
+-- 0. 共通トリガー関数（public.update_updated_at_column()）
+-- ================================================================
+-- 【なぜ public.update_updated_at_column() を本ファイルで作成するか】
+--   Supabase 標準プロジェクトには storage.update_updated_at_column() が
+--   Supabase Storage 用途で存在する。当初はスキーマ非修飾で
+--   update_updated_at_column() と書いても既存関数に解決されると誤認していたが、
+--   CREATE TRIGGER 実行時の検索パスに storage は含まれないため
+--   「function update_updated_at_column() does not exist」で失敗する。
+--   仮に解決できたとしても、Supabase 内部用途の関数に Quartet の
+--   アプリケーションテーブルを依存させるのは責務越境で不適切のため採用しない
+--   （Supabase 内部変更でシグネチャや挙動が変わった場合の影響を避ける）。
+--   本ファイルで public に独立した同一挙動の関数を作り、以降の
+--   CREATE TRIGGER は明示的に public.update_updated_at_column() を指定する。
+-- ================================================================
+
+CREATE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$;
 
 
 -- ================================================================
@@ -80,7 +126,7 @@ CREATE INDEX tenant_users_workos_user_id_idx
 
 CREATE TRIGGER update_tenant_users_updated_at
     BEFORE UPDATE ON public.tenant_users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 -- ================================================================
@@ -105,7 +151,7 @@ CREATE TABLE public.tenant_site_settings (
 
 CREATE TRIGGER update_tenant_site_settings_updated_at
     BEFORE UPDATE ON public.tenant_site_settings
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 -- ================================================================
@@ -147,7 +193,7 @@ CREATE INDEX tenant_sections_tenant_visible_order_idx
 
 CREATE TRIGGER update_tenant_sections_updated_at
     BEFORE UPDATE ON public.tenant_sections
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 -- ================================================================
@@ -200,7 +246,7 @@ CREATE INDEX tenant_images_tenant_id_idx
 
 CREATE TRIGGER update_tenant_images_updated_at
     BEFORE UPDATE ON public.tenant_images
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 -- ================================================================

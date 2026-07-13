@@ -29,10 +29,10 @@ PR3 を main にマージする前に、これらの RPC と依存テーブル�
   - `deleted_at` カラムが存在する（`0004` が `t.deleted_at IS NULL` で参照する）
   - データ: enu テナント1行（slug: `enu`, name: `enu nailsalon`）が投入済み。**残すべきシードデータ**
   - ポリシー: `tenants_public_read`（SELECT / public）が1件
-- `public.update_updated_at_column()` 関数（`0001` のトリガーが依存する共通関数）
 
 存在しないもの:
 
+- `public.update_updated_at_column()` 関数（本 PR の 0001 修正により本ファイルが作成する。当初 public に存在するとしていたのは、非修飾クエリで storage 版を誤検知したため）
 - `public.tenant_users` / `public.tenant_site_settings` / `public.tenant_sections` / `public.tenant_images`（`0001` が作成する）
 - `auth.is_tenant_owner()`（`0002`）
 - `auth.current_workos_user_id()`（認証実装フェーズで実装予定・未実装）
@@ -40,7 +40,9 @@ PR3 を main にマージする前に、これらの RPC と依存テーブル�
 - `public.get_owner_tenant_for_workos_user()`（`0004`）
 - `supabase_migrations.schema_migrations`（supabase CLI による migration 適用履歴テーブル。=CLI での正式適用は一度も行われていない）
 
-**結論**: 本番DBは「`0001` を流す直前の、正しい前提状態」にほぼ一致している。`tenants` と `update_updated_at_column()` が既にあるため、`0001` 以降を順に流せばリポジトリと本番が一致する。DROP・作り直しは不要。既存の enu データはそのまま活きる。
+**結論**: 本番DBは「修正版 `0001` を流す直前の、正しい前提状態」にほぼ一致している。`tenants` が既にあり、修正版 `0001` が `public.update_updated_at_column()` を自ら作成するため、修正版 `0001` 以降を順に流せばリポジトリと本番が一致する。DROP・作り直しは不要。既存の enu データはそのまま活きる。
+
+**前提の訂正（2026-07-09）**: 当初は `public.update_updated_at_column()` が本番に存在する前提としていたが、実際に存在したのは `storage.update_updated_at_column()`（Supabase Storage 内部用途）のみで、`public` には未存在だった。スキーマ非修飾での存在確認により storage 版を誤検知していた。この発見を踏まえ、`0001` を修正して `public.update_updated_at_column()` を本ファイル内で作成するよう変更した（`fix/0001-public-update-updated-at-column` ブランチ）。本計画書は修正後の `0001` を適用する前提で構成している。
 
 ---
 
