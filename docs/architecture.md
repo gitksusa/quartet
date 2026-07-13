@@ -241,6 +241,6 @@ Reservationsテーブルに書き込み（UPSERT）
 ## 環境構成
 | 環境 | 用途 | ブランチ |
 |------|------|---------|
-| dev | ローカル開発 | feature/* |
+| dev | ローカル開発 | feat/* / fix/* / docs/* / chore/* |
 | staging | 本番前の動作確認 | develop |
 | prod | 本番環境 | main |
