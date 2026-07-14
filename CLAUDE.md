@@ -220,14 +220,27 @@ Phase 6+: カルテ → 共通化分析 → page_blocks → template → block e
 
 ## 9. ブランチ戦略
 
-- `main`（本番・PR必須・force push禁止・削除禁止）← PR ← `develop`（統合・直接push可・force push/削除禁止）← `feature/susa/xxx`。
+- `main`（本番・PR必須・force push禁止・削除禁止）← PR ← `develop`（統合・直接push可・force push/削除禁止）← `feat/xxx` / `fix/xxx` / `docs/xxx` / `chore/xxx`。
 - **1 feature branch = 独立してマージできる論理的に完結した1単位 = 見せて恥ずかしくない1 PR。** 寿命は数日。
-- 例：`feature/susa/reservation-domain` / `reservation-api` / `reservation-admin` / `booking-from-hp` / `line-integration` / `hpb-sync`。
+- 例：`feat/reservation-domain` / `feat/reservation-api` / `feat/reservation-admin` / `feat/booking-from-hp` / `feat/line-integration` / `feat/hpb-sync`
+
+**ブランチ種別プレフィックス**（Conventional Commits に準拠）:
+
+- `feat/xxx`: 新機能・新ドメインの追加（例: `feat/reservation-domain`）
+- `fix/xxx`: 既存コード・既存migrationの不具合修正（例: `fix/0001-public-update-updated-at-column`）
+- `docs/xxx`: ドキュメントのみの変更、コードは触れない（例: `docs/future-arch-llm-plan`）
+- `chore/xxx`: 開発環境・設定・依存関係・CIなど、機能追加でも不具合修正でもない保守作業（例: `chore/update-deps`, `chore/github-actions`）
+
+個人開発のため、いずれのプレフィックスにも作業者名は付与しない。区別の実利が薄く、種別が分かれば十分なため。
+
+将来共同開発者が参加した場合は、全プレフィックスに一律で作業者名を挟む運用へ見直す。
+例: `feat/susa/reservation-domain`, `fix/susa/auth-guard`, `docs/susa/db-schema`, `chore/susa/github-actions`
+
 - **予約は domain → api → admin を固めてから外部連携（HP導線/LINE/HPB）に進む。** 土台が固まる前に複数ソースを繋がない。
 
 ### マージ方式（現時点で確定）
 ```
-feature/* → develop : Pull Request 必須・Squash and Merge
+feat/* / fix/* / docs/* / chore/* → develop : Pull Request 必須・Squash and Merge
 develop → main      : Pull Request 必須・Squash and Merge
 
 リリース

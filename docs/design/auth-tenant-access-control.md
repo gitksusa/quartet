@@ -150,6 +150,9 @@ $$;
 - **リスクの範囲**: 仮に第三者が有効な workos_user_id を知っていたとしても、取得した tenant_id だけではデータ書き込みはできない（write policy が守る）。workos_user_id はブルートフォース列挙が非現実的な不透明文字列。
 - **将来の移行余地**: Supabase Auth と WorkOS を統合する場合、EXECUTE を `authenticated` のみに限定できる（セクション6「将来に回す」参照）。
 
+**④ `public.get_owner_tenant_for_workos_user(p_workos_user_id text)` — 管理画面 slug 境界チェック用 RPC**
+`0004_tenant_context_lookup_function.sql` で定義する。PR3 の `assertTenantSlugAllowed()`（`src/lib/tenant/access.ts`）から呼び出し、認証済み WorkOS user の owner tenant の `tenant_id` と `slug` を取得する。認可経路を公開HP用 anon RLS から分離する判断・権限設計の詳細は同 migration ヘッダコメントを Source of Truth とする。
+
 ### 4.2 公開HP表示用 read policy（3テーブル共通方針）
 
 対象ロール: `anon`（未認証の公開アクセス）
