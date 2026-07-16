@@ -1,9 +1,27 @@
+import { getOwnerTenantSiteSettings } from "@/lib/tenant/site-settings";
+
+const COMMON_SECTIONS = [
+  "hero",
+  "concept",
+  "features",
+  "gallery",
+  "menu",
+  "staff",
+  "voice",
+  "access",
+  "reservation",
+  "campaign",
+  "faq",
+  "recruit_cta",
+] as const;
+
 export default async function AdminTenantDashboardPage({
   params,
 }: {
   params: Promise<{ tenantSlug: string }>;
 }) {
   const { tenantSlug } = await params;
+  const { templateType } = await getOwnerTenantSiteSettings(tenantSlug);
 
   return (
     <main className="mx-auto max-w-6xl p-8">
@@ -11,6 +29,30 @@ export default async function AdminTenantDashboardPage({
         <p className="text-sm text-gray-500">テナント</p>
         <h1 className="text-2xl font-bold">{tenantSlug}</h1>
       </header>
+
+      <section className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold">サイト設定</h2>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+          <dt className="text-gray-500">テンプレート</dt>
+          <dd className="text-gray-900">
+            {templateType ?? <span className="text-gray-400">未設定</span>}
+          </dd>
+        </dl>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold">共通セクション</h2>
+        <ul className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {COMMON_SECTIONS.map((id) => (
+            <li
+              key={id}
+              className="rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700"
+            >
+              {id}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section>
         <h2 className="mb-4 text-lg font-semibold">管理機能</h2>
