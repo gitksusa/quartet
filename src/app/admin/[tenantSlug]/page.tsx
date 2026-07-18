@@ -1,5 +1,7 @@
 import { getOwnerTenantSiteSettings } from "@/lib/tenant/site-settings";
 
+import { Step1TemplatePicker } from "./step1-template-picker";
+
 const COMMON_SECTIONS = [
   "hero",
   "concept",
@@ -41,6 +43,14 @@ export default async function AdminTenantDashboardPage({
       </section>
 
       <section className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold">STEP1: テンプレート選択</h2>
+        <Step1TemplatePicker
+          tenantSlug={tenantSlug}
+          currentTemplateType={templateType}
+        />
+      </section>
+
+      <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold">共通セクション</h2>
         <ul className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {COMMON_SECTIONS.map((id) => (
@@ -56,16 +66,7 @@ export default async function AdminTenantDashboardPage({
 
       <section>
         <h2 className="mb-4 text-lg font-semibold">管理機能</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <article className="rounded-md border border-gray-200 p-6">
-            <h3 className="text-base font-semibold">テンプレート選択</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              HP テンプレートを選択・切り替えます。
-            </p>
-            <span className="mt-4 inline-block rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
-              準備中
-            </span>
-          </article>
+        <div className="grid gap-4 sm:grid-cols-2">
           <article className="rounded-md border border-gray-200 p-6">
             <h3 className="text-base font-semibold">セクション編集</h3>
             <p className="mt-2 text-sm text-gray-600">
