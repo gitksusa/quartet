@@ -39,47 +39,79 @@ deleted_at                    timestamptz (nullable)
 
 ---
 
-## 1. `template_type` の置き場所：A案 / B案 比較
+## 1. `template_type` と `mood` の 2 軸設計（B 案採用）
 
-### A案: `tenants.template_type` に直接追加
+テンプレート（構造・レイアウト）と mood（雰囲気：色味・質感）は**独立した 2 軸**として扱う。全 mood は全テンプレートで自由に組み合わせ可能とする。
 
-```
-tenants.template_type   text
-```
+- **テンプレ = HTML 骨格**（セクション並び・強調度・全体構造）
+- **mood = デザイントークン**（CSS 変数セット：色・フォント・角丸・影・余白）
 
-- メリット: 実装が最小。JOINが不要で、Phase 0bの範囲では十分動く。
-- デメリット: 将来 `theme`（配色）、`seo_title`、`seo_description`、`published_at`、`custom_domain` などHP設定が増えるたびに `tenants` にカラムが増え続ける。`tenants` はテナント管理画面・認証・契約プラン等、本来HPの表示設定とは異なる責務を持つテーブルであり、肥大化すると責務が混ざる。
+この分離により、組み合わせの実装コストは 6×N ではなく **6+N** に抑えられる。テンプレ追加は HTML 骨格 1 パターン追加、mood 追加は Zod 許容値追加 + トークンセット 1 個追加のみで **migration 不要**。詳細は `hp-template-patterns.md` の「原則 4」および「mood パレット定義」節を参照。
 
-### B案: `tenant_site_settings` テーブルを新設
+### テーブル配置（B 案採用）
+
+`tenant_site_settings` テーブルに `template_type` と `mood` を持つ。理由は責務分離：`tenants` は契約・組織、`tenant_site_settings` は公開 HP の見せ方（性質が異なる）。
 
 ```
 tenant_id       uuid (PK, FK -> tenants.id)
-template_type   text
+template_type   text                              -- テンプレート識別子
+mood            text                              -- mood 識別子
+[店舗基本情報カラム群 → 1.5 節]
 created_at      timestamptz default now()
 updated_at      timestamptz default now()
 ```
 
 将来の拡張先（今は追加しない。設計上の置き場所だけ示す）:
 ```
-theme               text      -- 配色テーマ等
 seo_title           text
 seo_description     text
 published_at        timestamptz
 custom_domain       text
 ```
 
-- メリット: `tenants`（テナントの契約・機能フラグ）と `tenant_site_settings`（公開HPの表示設定）の責務が明確に分離される。HP設定が増えてもこのテーブルだけが伸びる。`tenant_id` を PK にすることで1テナント1行が保証され、JOINも単純（`tenants` と 1:1）。
-- デメリット: A案よりテーブルが1つ増え、実装時にJOINが必要になる。
+- `template_type` / `mood` はいずれも **text**。許容値は Zod（アプリ層）で管理し、**Postgres enum は使わない**（原則: 追加時に migration が必要になるのを避ける・`section_id` / `classification` と同じ方針）
+- mood を新規追加しても DB 変更は不要（Zod 列挙値 + CSS 変数トークンセット 1 つの追加のみ）
 
-### 推奨: B案
+### A 案（`tenants.template_type` 直置き）を却下した理由
 
-理由は3つ。
+- `tenants` に混在させると「テナントの属性」なのか「HP の表示設定」なのかが曖昧になる
+- 将来 SEO 項目・`custom_domain` などの HP 設定が増えるたびに `tenants` が肥大化する
+- `tenants` はテナント管理画面・認証・契約プラン等、本来 HP の表示設定とは異なる責務を持つ
 
-1. **責務分離**: `tenants` はテナントという「契約・組織」の実体を表すテーブル、`tenant_site_settings` は「公開HPの見せ方」を表すテーブル。性質が異なるものを同じテーブルに置かない。
-2. **将来の拡張に耐える**: `theme` / SEO項目 / `custom_domain` など、HP設定は今後確実に増える。B案ならこれらの置き場所が最初から決まっており、`tenants` を触らずに拡張できる。
-3. **`template_type` は継続的に参照される値**（今回の合意事項）: 公開HP表示・管理画面の両方で常時参照する値なので、「テナントの公開HP設定」を表すテーブルに置く方が意味的に正しい。`tenants` に置くと「テナントの属性」なのか「HPの表示設定」なのか曖昧になる。
+`tenant_id` を PK にすることで 1 テナント 1 行が保証され、`tenants` との 1:1 JOIN も単純。責務分離の観点で B 案を採用。
 
-**コンテンツのSSOTは `tenant_sections`（次節）であり、`tenant_site_settings.template_type` はあくまで「見せ方・レイアウト選択」に限定する。** テンプレートを変えてもコンテンツ自体（テキスト・画像）は変わらない、という原則をテーブル構造でも表現する。
+**コンテンツの SSOT は `tenant_sections`（次節）であり、`tenant_site_settings.template_type` / `mood` はあくまで「見せ方・レイアウト選択」に限定する。** テンプレ・mood を変えてもコンテンツ自体（テキスト・画像）は変わらない、という原則をテーブル構造でも表現する。
+
+---
+
+## 1.5 `tenant_site_settings` に追加する店舗基本情報カラム
+
+店舗基本情報（店名表示用・住所・電話・営業時間・定休日・最寄駅情報）は `tenant_site_settings` に一元化する。STEP0（初回のみ）で一度だけ入力し、`access` / `reservation` セクションが自動参照する。**二度打ちさせない**設計原則。
+
+### 追加カラム
+
+```
+display_name     text        -- 店名表示用（tenants.name とは別。表示用の表記揺れを許容）
+address          text        -- 住所（1 行文字列。都道府県〜番地〜建物名）
+phone            text        -- 電話番号（表記自由。ハイフン有無等）
+business_hours   text        -- 営業時間（自由記述。曜日別の細分は初期は文字列で）
+closed_days     text        -- 定休日（自由記述。「毎週火曜」「不定休」等）
+nearest_station  text        -- 最寄駅情報（「〇〇駅 徒歩5分」等の自由記述）
+```
+
+- いずれも text・自由記述。バリデーションは Zod（本 doc 原則: enum 不使用）
+- 構造化（jsonb / 曜日別テーブル分離）は現段階では過剰。実際の運用で細かい制約が必要になった段階で見直す
+- `deleted_at` は持たない（`tenant_site_settings` 自体が持たない方針を継承）
+
+### 自動参照の設計
+
+- `access` セクションの content は `map_note` のみを持つ（内部記述用）。address / nearest_station は tenant_site_settings から自動読み込み・公開 HP 描画時にセクションレンダラで合成
+- `reservation` セクションの電話予約表示は tenant_site_settings.phone を参照
+- 「店名表示」（hero や concept 等の見出し）は display_name を参照可能。ただし `tenant_sections.content.headline` 等でセクション独自のキャッチコピーを持つのは自由
+
+### 初回入力タイミング（UI）
+
+`admin-ui-lite.md` の STEP0 で入力する。**STEP0 完了条件**は「必須項目（実装時に確定・`display_name` のみを想定）が入力済みであること。他は任意」とする。既入力の場合は STEP0 をスキップして STEP1（テンプレ選択）に直接進む。
 
 ---
 
@@ -115,6 +147,67 @@ PostgreSQL の enum 型は後から値を追加しづらい（型の ALTER が�
 ### `tenant_sections` に `deleted_at` を持たせない判断
 
 `tenants` テーブルには `deleted_at`（soft delete）があるが、`tenant_sections` には設けない。理由: セクションの「非表示」は既に `is_visible` が担っており、削除と非表示を区別する実用上のメリットが薄い。テナントが特定セクションのレコード自体を物理的に持たなくなるケース（例: 一度設定したが二度と使わない）は稀で、`is_visible = false` で十分表現できる。これは設計判断であり、運用上ニーズが出れば再検討する。
+
+### `tenant_sections` の下書き/公開分離（`content` / `published_content`）
+
+`tenant_sections` は 2 フィールドで下書きと公開を分離する。
+
+```
+content            jsonb NOT NULL DEFAULT '{}'   -- 下書き（管理画面の編集対象）
+published_content  jsonb                         -- 公開（公開 HP が読む対象・nullable）
+```
+
+- 管理画面の編集入力は debounce（500ms〜1s）で `content` へ自動保存される（保存ボタン不要・保存インジケータ表示）。詳細は `admin-ui-lite.md` の「自動保存・下書き/公開分離」節参照
+- 右下の「完了」ボタンで `content` を `published_content` へコピー = 本番公開
+- 公開 HP は **`published_content` のみを読む**。`content` は管理画面のプレビューでのみ使う
+- 初回公開前（`published_content` IS NULL または空 jsonb）の公開 HP 表示は、テンプレ側で「準備中」の代替表示に統一（セクションを非表示にするか、プレースホルダを出すかはテンプレの実装判断）
+
+### 自動保存の頻度と失敗時の扱い（実装段階で詳細化）
+
+- debounce は入力停止後 500ms〜1s 想定。負荷・UX の実測で調整
+- 保存失敗時は保存インジケータを「失敗」表示にし、次回入力トリガー時に再送。実装の詳細は該当 PR（PR11+）で確定
+
+---
+
+## 2.1 セクション別 `content` 形状（Zod スキーマ）
+
+12 セクションの content 形状を型別に分類する。各セクションの Zod スキーマは `src/lib/validation/`（未存在・PR11+ で新設予定）で定義する。
+
+### 固定項目型（6 種）
+
+```
+hero          { headline, subcopy, cta_text }
+concept       { title, body }
+access        { map_note }                                -- address/nearest_station は tenant_site_settings から自動参照
+reservation   { title, body, cta_text, line_url }         -- phone は tenant_site_settings から自動参照
+campaign      { title, body, period, cta_text }
+recruit_cta   { title, body, cta_text }
+```
+
+### 可変配列型（5 種）
+
+```
+features   { title, items: [{ heading, body }] }
+staff      { title, members: [{ name, role, bio }] }
+voice      { title, items: [{ customer_label, body }] }
+faq        { title, items: [{ question, answer }] }
+menu       { title, categories: [{ category_name, items: [{ name, price, description }] }] }
+```
+
+- `menu` は **2 階層**（カテゴリ配列 → 各カテゴリの品目配列）
+- `menu.items[].price` は **string 型**。理由: 表記自由度（「¥5,000〜」「税抜 4,500 円」「価格応相談」等の柔軟性）。数値計算・並び替えを行わないため string で運用上十分。将来集計等の要件が出た時点で number 化を検討
+
+### 画像主体型（1 種）
+
+```
+gallery   { title, note }                                 -- 画像本体・caption・alt は tenant_images 側
+```
+
+### 原則: `content` はテキストと構造のみ
+
+- 色・フォント・折り返し・太さは mood / テンプレ側で管理する。**content には visual プロパティを持たせない**
+- 空フィールド・空配列は表示側で自然省略（テンプレの HTML 骨格が「空なら描画しない」判定を持つ）
+- 全項目 optional（Zod で `.optional()` 適用）。「必須の項目」を管理画面で明示するのは UI 側の責務であり、DB スキーマは緩く保つ
 
 ---
 
@@ -195,16 +288,11 @@ deleted_at      timestamptz （nullable, soft delete）
 
 ## 未決事項
 
-### テンプレート変更時の挙動（未確定）
+### テンプレート変更時の挙動（確定：2 軸独立で解決）
 
-テナントが一度選んだ `template_type` を後から別のテンプレートに変更した場合の挙動は、本ドキュメントでは確定しない。
+テンプレ（HTML 骨格）と mood（CSS 変数）と content（テキスト・構造）は独立して切替可能。テンプレ変更は**表示側の骨格切替のみで content は不変**。したがってテンプレを別のパターンへ変更しても、`tenant_sections.content` / `published_content` / `tenant_images` はそのまま活きる。テンプレによって描画されないセクション（例: Menu 型を選ぶと `staff` が骨格に含まれない）が発生した場合、content は残るが表示されない状態になる。この挙動は仕様として許容し、テナントには「テンプレによってはこのセクションが非表示になります」と管理画面 UI で明示する（実装は PR11+）。
 
-**暫定方針（合意済み）:**
-- コンテンツ自体（`tenant_sections.content`）は破壊しない。テンプレートを変えてもテキスト・画像のデータは保持する。
-- `display_order` / `is_visible` を新テンプレートのデフォルトに合わせて再初期化するかどうかは、将来検討する。
-- **Phase 0b では、初回テンプレート選択後の切り替えUIは実装しない。** テンプレートは初回選択のみを扱う。
-
-この未決事項は、テンプレート切り替えUIを実装したくなった時点で改めて設計する（このドキュメントの Review trigger 参照）。
+mood 変更も表示側の CSS 変数差替えのみで content 不変。`display_order` / `is_visible` を新テンプレートのデフォルトに合わせて再初期化するかどうかは、将来の切り替え UI 実装時に検討する。
 
 ---
 

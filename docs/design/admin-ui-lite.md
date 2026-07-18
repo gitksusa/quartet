@@ -4,13 +4,14 @@
 **Owner**: k susa
 **Decision date**: 2026-07
 **前提ドキュメント**:
-- `docs/design/hp-template-patterns.md`（テンプレート・共通セクションID）
-- `docs/design/hp-db-schema.md`（tenant_sections / tenant_images / tenant_site_settings）
+- `docs/design/hp-template-patterns.md`（テンプレート・共通セクションID・mood パレット）
+- `docs/design/hp-db-schema.md`（tenant_sections / tenant_images / tenant_site_settings・下書き/公開分離）
 - `docs/design/auth-tenant-access-control.md`（認証・権限設計）
 **Review trigger**:
 - 管理画面ルーティング実装着手時
 - 新しい管理画面ページを追加したくなった時
-- テンプレート切り替えUIを実装したくなった時（未決事項の確定）
+- STEP 構成を増減したくなった時（STEP の追加・統合・削除）
+- mood の追加・削除が必要になった時（`hp-template-patterns.md` の mood パレット定義を先に更新）
 
 ---
 
@@ -23,162 +24,165 @@
 ## 設計方針
 
 - **Phase 0b の管理画面はLite CMSとして最小限に絞る。** 将来のブロックエディタ（Phase 6+）の土台を今作らない。
-- **テンプレートは初回選択のみ。** 自由なテンプレート切り替えUIはPhase 0bでは実装しない（`auth-tenant-access-control.md` の未決事項と同じ方針）。
-- **画像管理は各セクション編集画面に内包する。** 独立した画像ライブラリ画面はPhase 0b初期では本格実装しない。
+- **テンプレート・mood は STEP1・STEP2 で選択し、過去 STEP に戻れば変更可能。** テンプレ・mood を変えても content は不変（`hp-db-schema.md` の「テンプレート変更時の挙動」参照）。
+- **画像管理はセクション編集の STEP4 に統合する。** 独立した画像ライブラリ画面はPhase 0b初期では本格実装しない。
 
 ---
 
 ## 管理画面のURL構造
 
-**ベースパス**: `/admin/[tenantSlug]/`
+**単一パス**: `/admin/[tenantSlug]`
 
-`[tenantSlug]` はテナントの識別子（`tenants.slug`）。認証ガードによりログイン済みかつ当該テナントの `owner` のみアクセス可能。
+管理画面は **1 画面（単一ルート）で完結**する。従来案の `/template`, `/sections`, `/sections/[sectionId]`, `/settings`, `/images` といった別ページ URL は**廃止**。すべての編集操作は同一画面内の STEP ウィザードで行い、画面遷移なしで完了できる（詳細は次節）。
 
----
-
-## 画面一覧
-
-### 1. `/admin/[tenantSlug]`（ダッシュボード）
-
-**責務**: 管理画面のトップ。公開HPの状態と主要設定の概要を表示。
-
-表示する情報:
-- 現在のテンプレート名
-- 公開HP の公開状態（published / draft）
-- 各セクションのON/OFF概要（一覧表示）
-- 公開HPへのリンク
-
-**Phase 0bでは実装する。**
+`[tenantSlug]` はテナントの識別子（`tenants.slug`）。認証ガードにより、ログイン済みかつ当該テナントの `owner` のみアクセス可能（既存の PR4 layout 第一関門）。
 
 ---
 
-### 2. `/admin/[tenantSlug]/template`（テンプレート選択）
+## STEP 構成（4 ステップ + STEP0）
 
-**責務**: 初回テンプレート選択、および現在のテンプレート確認。
+管理画面は STEP0 と STEP1〜STEP4 の合計 5 段階で構成される。画面遷移はなく、同一ルート `/admin/[tenantSlug]` 内で STEP を進行する。
 
-- テナントが初めてログインした際、テンプレートを1つ選ぶ
-- 選択後は「現在のテンプレート」として表示するのみ
-- **Phase 0bでは自由なテンプレート切り替えUIは実装しない**（`hp-db-schema.md` 未決事項参照）
-- テンプレートを変更したい場合は、将来のフェーズで対応
+過去に完了した STEP は**左端に細く畳まれて積み重なり**、いつでもクリックして戻り部分修正できる。他の STEP の入力内容は保持される。
 
-**Phase 0bでは初回選択フローのみ実装する。**
+### STEP0: 店舗基本情報（初回のみ）
+
+**責務**: 店名表示用・住所・電話・営業時間・定休日・最寄駅の初回入力。
+
+**体験仕様**:
+- 未入力の初回ログイン時のみ表示。**必須は店名表示用のみ想定・実装時確定**。既入力の場合は STEP1 に自動進行
+- 各項目は自由記述テキスト（Zod でバリデーション）
+- 完了で `tenant_site_settings` の店舗基本情報カラム群に保存（`hp-db-schema.md` 1.5 節参照）
+- `access` / `reservation` セクションが自動参照するため、二度打ち不要
+
+### STEP1: テンプレート選択
+
+**責務**: HTML 骨格の選択（`hp-template-patterns.md` の 6 パターン）。
+
+**体験仕様**:
+- 選択後は左端に細く畳まれる
+- 画面右側に**常時リアルタイムプレビュー**（下書き `content` を反映）
+- 選択で `tenant_site_settings.template_type` に保存
+- テンプレ変更で content は不変（`hp-db-schema.md` の「テンプレート変更時の挙動」参照）
+
+### STEP2: mood 選択
+
+**責務**: mood（雰囲気・CSS 変数セット）の選択。
+
+**体験仕様**:
+- 「このテンプレへのおすすめ mood」を先頭に表示（初期は定数「おすすめ」・後続で「人気」へ移行・詳細は `hp-template-patterns.md` の「おすすめ/人気ランキング」参照）
+- 選択で即プレビュー反映（CSS 変数のみ差替）
+- 選択で `tenant_site_settings.mood` に保存
+
+### STEP3: セクション ON/OFF ＋ 階層入力
+
+**責務**: 12 セクションの表示切替と content 入力。
+
+**体験仕様**:
+- 12 セクション（`hp-template-patterns.md` の共通セクションID）の ON/OFF トグル（`tenant_sections.is_visible` を切替）
+- ON にしたセクションは吹き出し UI で階層入力（固定項目型 / 可変配列型 / 画像主体型の 3 パターン。詳細は `hp-db-schema.md` 2.1 節）
+- 可変配列型（features / staff / voice / faq / menu）は「+追加」で小見出しが増える
+- 入力済みの小見出しは**緑チェック**で状態を明示
+- 入力済み小見出しはセクション欄に並び、後から再編集可能
+- **画面遷移なし**・同一画面内で完結
+- 入力は debounce（500ms〜1s）で `content` へ自動保存（次節「自動保存」参照）
+- 吹き出し UI のコンポーネント構造・アニメーション・キーボードナビゲーション等の実装詳細は PR11+ の実装時に確定する（本 doc では体験仕様のみ記述）
+
+### STEP4: 画像
+
+**責務**: セクション画像のアップロード。
+
+**体験仕様**:
+- プレビュー全体に**番号付き画像枠**が表示される（テンプレ骨格が「ここに画像 N 番」を示す）
+- 番号ごとにアップロード
+- アップロード後は該当セクションに即反映
+- プレビュー上の直接クリック差替は**後続改善**（Phase 0b の初期実装では番号ベースの UI）
+- 画像分類（`classification`）の選択を必須とする
+- `treatment_result` の場合は `source_note` 入力を必須とする（`content-image-policy.md` の方針）
+- 保存先は `tenant_images` テーブル（既存設計・`hp-db-schema.md` 3 節）
+
+### STEP 間の移動
+
+- 左端に積み重なった過去 STEP のバッジをクリックで即時戻れる
+- 現在編集中の STEP の入力は失われずに保持される
+- 全 STEP の完了状態は保存インジケータで俯瞰できる（実装詳細は PR11+）
 
 ---
 
-### 3. `/admin/[tenantSlug]/sections`（セクション一覧）
+## 自動保存・下書き/公開分離
 
-**責務**: 全セクションの表示ON/OFFと並び順の管理。
+管理画面の編集は**自動保存**を基本とし、公開は明示的な「完了」ボタンで行う。
 
-表示・操作する内容:
-- 全セクション一覧（`tenant_sections` の全行。選択テンプレートに応じたデフォルト順）
-- 各セクションの `is_visible` トグル（ON/OFF切り替え）
-- 各セクションへの編集リンク（→ `/sections/[sectionId]`）
-- 並び順の表示（Phase 0bでは並び順の変更UIは実装しない。確認のみ）
+### 自動保存（下書きへ）
 
-**Phase 0bでは実装する。ただし drag & drop による並び替えは実装しない。**
+- 入力停止後 500ms〜1s の debounce で `tenant_sections.content`（下書き）へ自動保存
+- **保存ボタンは設けない**
+- 画面上に**保存インジケータ**を表示（「保存中」「保存済み」「保存失敗」の 3 状態）
+- 保存失敗時は次回入力トリガー時に再送。失敗が継続する場合の UI は PR11+ 実装時に確定
 
----
+### 完了ボタンで公開
 
-### 4. `/admin/[tenantSlug]/sections/[sectionId]`（セクション編集）
+- 画面右下に「完了」ボタンを配置
+- 押下で `content` を `published_content` へコピー = 本番公開
+- 公開 HP は `published_content` のみを読む（下書きの `content` は公開されない）
+- 初回公開前（`published_content` IS NULL）の公開 HP 表示は「準備中」相当のプレースホルダ（テンプレ側の実装判断・詳細は `hp-db-schema.md` 2 節）
 
-**責務**: 特定セクションのコンテンツ編集。
+### プレビューは常に下書き（`content`）を表示
 
-操作する内容:
-- `tenant_sections.content`（jsonb）の各フィールドを編集
-  - hero: キャッチコピー・サブコピー
-  - concept: 見出し・本文
-  - menu: メニュー項目（名前・価格・説明）の追加・編集・削除
-  - staff: 氏名・肩書き・メッセージ
-  - 等（セクションIDごとに入力フォームが変わる）
-- 画像のアップロード・差し替え（`tenant_images` への保存を含む）
-  - 画像分類（`classification`）の選択を必須とする
-  - `treatment_result` の場合は `source_note` 入力を必須とする（`content-image-policy.md` の方針）
-
-**Phase 0bでは全セクションIDに対応した編集フォームを実装する。**
-**Zod（`src/lib/validation/`）でコンテンツのバリデーションを行う前提。**
-
----
-
-### 5. `/admin/[tenantSlug]/settings`（公開設定）
-
-**責務**: HPの公開設定とSEO設定。`tenant_site_settings` テーブルを編集する画面。
-
-操作する内容:
-- 公開状態の切り替え（published / draft）
-- SEO title / description の編集
-
-将来の拡張先（Phase 0bでは実装しない）:
-- `custom_domain` の設定
-- テーマ（配色）の選択
-
-**Phase 0bでは公開状態・SEO title / description のみ実装する。**
-
----
-
-### 6. `/admin/[tenantSlug]/images`（画像ライブラリ）
-
-**責務**: テナントが登録した画像の一覧・管理。
-
-**Phase 0b初期では本格実装しない。**
-
-理由: 画像の登録・差し替えは各セクション編集画面（`/sections/[sectionId]`）内で完結する。独立した画像ライブラリは、画像点数が増えて「使い回したい」ニーズが出た時点で実装する。
-
-画面一覧には定義として載せるが、実装は将来フェーズ。
+- 管理画面のリアルタイムプレビューは `content` を反映
+- 「今何が本番に出ているか」と「今下書きで編集中の状態」を区別する UI（例: 「本番と差分あり」バッジ）の要否は PR11+ 実装時に確定
 
 ---
 
 ## 実装の分割方針（PRの切り方）
 
-管理画面の実装は、以下のPR単位で進める。各PRは独立してマージできる論理的な完結単位とする。
+Phase 0b の管理画面実装は複数の小 PR に段階分解する。**1 PR に複数機能を詰めない**。以下は現時点の想定であり、実装時の粒度で調整する余地を残す。
 
-```
-PR1: migration のみ
-  - tenant_users
-  - tenant_site_settings
-  - tenant_sections
-  - tenant_images
-  - 必要な制約・index・updated_at trigger
-  - RLS の土台（read policy のみ先行適用）
+### PR8: テンプレート選択の保存（STEP1）
 
-PR2: src/lib/auth / src/lib/tenant の土台
-  - WorkOS AuthKit 基本設定
-  - JWT 検証・セッション管理
-  - workos_user_id → tenant_id 解決
+- `/admin/[tenantSlug]` の 1 画面内で STEP1（テンプレ選択）のみを動作させる
+- 選択結果を `tenant_site_settings.template_type` に保存する Server Action を追加
+- プレビュー機能は最小限（画像なし・content 空でも骨格が描画される程度）
 
-PR3: 管理画面ルーティングと認証ガード
-  - /admin/[tenantSlug] のルーティング
-  - ログインしていなければ /login にリダイレクト
-  - 他テナントへのアクセスを拒否
+### PR9: mood 選択の保存（STEP2）＋ mood トークン初期セット
 
-PR4: ダッシュボード + セクション一覧
-  - /admin/[tenantSlug]
-  - /admin/[tenantSlug]/sections
+- STEP2（mood 選択）を追加
+- mood トークン初期セット（3〜5 個・詳細は `hp-template-patterns.md`）を CSS 変数として実装
+- 「おすすめ」定数の表示（実データ集計はまだ）
 
-PR5: セクション編集（テキスト）
-  - /admin/[tenantSlug]/sections/[sectionId]
-  - tenant_sections.content の編集フォーム
+### PR10: セクション ON/OFF（STEP3 の骨格・階層入力なし）
 
-PR6: セクション編集（画像）
-  - /admin/[tenantSlug]/sections/[sectionId] に画像アップロードを追加
-  - tenant_images への保存・差し替え
+- 12 セクションの ON/OFF トグルを実装
+- ON/OFF は `tenant_sections.is_visible` に保存
+- content の階層入力はまだ実装しない
 
-PR7: テンプレート選択 + 公開設定
-  - /admin/[tenantSlug]/template
-  - /admin/[tenantSlug]/settings
-```
+### PR11+: セクション階層入力（content JSON ＋ 自動保存）
 
-**PR1 は migration のみ。WorkOS 実装・管理画面UI・セクション編集画面は混ぜない。**
+- STEP3 の吹き出し UI・可変配列の「+追加」・緑チェック等を実装
+- Zod スキーマ（`src/lib/validation/`）を新設し、セクション別バリデーション
+- debounce 自動保存の実装
+- 吹き出し UI のコンポーネント設計・アクセシビリティ等の詳細を確定
+
+### 後続 PR
+
+- 画像管理（STEP4）
+- 下書き/公開分離の完了ボタン + `published_content` コピー処理
+- STEP0（店舗基本情報の初回入力・既入力スキップ判定）
+- おすすめ/人気ランキングの集計関数実装（時期未定）
+
+### PR8-11+ の順序をロードマップに反映
+
+上記の順序は `docs/roadmap.md` の NOW 節「Phase 0b の PR 分解」にも記録する。詳細（設計判断・却下案）は本 doc で管理し、順序と時期は roadmap.md 側で一元管理する。
 
 ---
 
 ## Phase 0b で実装しないもの（明示的に除外）
 
 - drag & drop によるセクション並び替えUI
-- テンプレート自由切り替えUI（初回選択のみ）
-- 画像ライブラリ（`/admin/[tenantSlug]/images`）の本格実装
+- プレビュー上の直接クリック差替（画像管理は STEP4 の番号ベース UI で完結）
 - `admin` / `staff` ロールの管理画面（owner のみ）
 - `custom_domain` 設定
-- テーマ（配色）選択
+- テーマ（配色）選択（mood 選択で代替する範囲）
 - 複数テナントの切り替えUI
 - 顧客向けアカウント（サロン利用者側）
 
@@ -186,6 +190,6 @@ PR7: テンプレート選択 + 公開設定
 
 ## 次フェーズへの引き継ぎ
 
-この簡易設計を前提として、最初の実装PR（migration）に進む。各PRの実装はClaude Codeで行い、Codexでレビューする。PR本文には「AIレビュー」セクションを追加する。
+この簡易設計を前提として、Phase 0b の管理画面実装 PR（PR8 以降）に進む。各 PR の実装は Claude Code で行い、Codex でレビューする。PR 本文には「AIレビュー」セクションを追加する。
 
 **このドキュメントはDraft。実装を進める中で、画面追加・責務変更が生じた場合はここに戻って更新する。**
