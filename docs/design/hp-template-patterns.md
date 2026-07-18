@@ -125,6 +125,28 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 
 ## テンプレート6パターン
 
+### 識別子一覧（code / DB で使用）
+
+| 番号 | 識別子（snake_case） | 表示名 | 主役 |
+|---|---|---|---|
+| 1 | `atmosphere` | Atmosphere | 空間・世界観・雰囲気 |
+| 2 | `gallery` | Gallery | 施術作品・写真主体 |
+| 3 | `staff` | Staff / Artist | 施術者・オーナー |
+| 4 | `conversion` | Menu / Conversion | 予約導線・料金 |
+| 5 | `trust` | Trust / Treatment | 実績・信頼・技術 |
+| 6 | `brand` | Brand / Multi Service | 複数サービス・ブランド |
+
+これらの識別子は `tenant_site_settings.template_type` に **text** として保存される。
+
+### mood との扱いの非対称性
+
+`template_type` と `mood`（原則 4）は独立 2 軸だが、**許容値の管理方式は非対称**である。
+
+- `template_type`: **DB 側の書き込み関数内でも許容値検証**（`docs/db/migrations/0006_upsert_owner_tenant_template_type.sql` の `NOT IN ('atmosphere','gallery','staff','conversion','trust','brand') THEN RAISE EXCEPTION` により防御）。理由: template_type は公開 HP の描画分岐（HTML 骨格の選択）に直結し、不正値が本番 DB に入ると公開 HP のレンダリングが壊れる。anon EXECUTE の書き込み関数を通す以上、関数単体で防御する必要がある。したがってテンプレ追加時は **本関数の許容値更新 migration を伴う**
+- `mood`: **アプリ層の Zod で許容値管理・DB 検証なし**（`hp-db-schema.md` 節 1 参照）。理由: mood は CSS 変数トークンの差替のみで公開 HP の骨格には影響せず、不正値でもフォールバックで安全に処理できる。mood 追加は Zod 列挙値 + トークンセット追加のみで **migration 不要**
+
+この非対称性は「不正値が本番 HP のレンダリングを壊すかどうか」の影響度の差に基づく設計判断。将来 mood 側も骨格に影響する要素を持たせる方針変更があれば、DB 側検証（mood 用の書き込み RPC）を導入する。
+
 ### テンプレート1: Atmosphere（世界観型）
 
 - **主役**: 空間・世界観・雰囲気

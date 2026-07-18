@@ -96,3 +96,69 @@ export async function getOwnerTenantSiteSettings(
     templateType: template_type,
   }
 }
+
+/**
+ * 認証済みユーザーが所有する tenant（URL の tenantSlug と一致）の
+ * template_type を保存する（UPSERT）。
+ *
+ * 検証の流れ:
+ *   1. requireAuth() で WorkOS 認証セッションを確立し workos_user_id を得る
+ *   2. public.upsert_owner_tenant_template_type_for_workos_user() SECURITY DEFINER
+ *      RPC で workos_user_id + tenantSlug + templateType を渡す
+ *   3. RPC が 0 行返却（認可失敗）→ TenantNotFoundError を throw
+ *   4. RPC が 1 行返却（認可 OK・UPSERT 完了）→ tenantId を返す
+ *
+ * 検証方向の制約（access.ts / getOwnerTenantSiteSettings の read 側と同じ原則）:
+ *   起点は必ず認証済み workos_user_id 側。tenantSlug と templateType は RPC 内で
+ *   AND 条件・許容値検証に使うだけで、他テナントの列挙経路を作らない。
+ *
+ * 認可の正しさは公開ページ用 RLS に依存させない。専用の SECURITY DEFINER 関数
+ * （0006）経由でのみ書き込みを行う。
+ *
+ * template_type の許容値検証:
+ *   RPC 側（0006）が 'atmosphere','gallery','staff','conversion','trust','brand'
+ *   以外を受け取ると例外を throw する。呼び出し側（Server Action）で入力を絞る
+ *   のと合わせた二重防御。
+ *
+ * 0 件の扱い（認可失敗）:
+ *   layout の第一関門を通過した後にここで 0 件が返るのは、race condition か実装
+ *   バグ・データ不整合であり、UI で正常系として扱わず throw を素通しさせる
+ *   （既存 getOwnerTenantSiteSettings と同じ方針）。
+ *
+ * RPC 失敗時（例外含む）:
+ *   generic Error を throw する。呼び出し側 Server Action は catch せず Next.js
+ *   の error boundary に処理を委ねる。
+ *
+ * 呼び出し制約: Server Component / Route Handler / Server Action からのみ呼び出す。
+ * Client Component からは呼び出さない（server-only）。
+ */
+export async function saveOwnerTenantTemplateType(
+  tenantSlug: string,
+  templateType: string,
+): Promise<{ tenantId: string }> {
+  const { user } = await requireAuth()
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc(
+    'upsert_owner_tenant_template_type_for_workos_user',
+    {
+      p_workos_user_id: user.id,
+      p_tenant_slug: tenantSlug,
+      p_template_type: templateType,
+    },
+  )
+
+  if (error) {
+    throw new Error(
+      `Failed to save tenant template_type via RPC: ${error.message} (code: ${error.code ?? 'unknown'})`,
+    )
+  }
+
+  const rows = (data ?? []) as Array<{ tenant_id: string }>
+
+  if (rows.length === 0) {
+    throw new TenantNotFoundError(user.id)
+  }
+
+  return { tenantId: rows[0].tenant_id }
+}
