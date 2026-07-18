@@ -58,6 +58,44 @@ PR8 のコード（`src/lib/tenant/site-settings.ts` の `saveOwnerTenantTemplat
 
 ---
 
+## 既存 broken 版 0006 の置換手順
+
+初回の 0006 本番適用時に UPSERT で 42702 column reference is ambiguous エラーが発生した（`ON CONFLICT (tenant_id)` の `tenant_id` が `RETURNS TABLE` の暗黙出力変数と衝突していた）。修正版は `ON CONFLICT ON CONSTRAINT tenant_site_settings_pkey` に変更し、関数シグネチャ（引数の型・順序・RETURN TYPE）は無変更。
+
+**なぜ DROP → CREATE ではなく CREATE OR REPLACE か**:
+- 修正版の関数シグネチャは broken 版と完全に同一
+- `CREATE OR REPLACE FUNCTION` は同一シグネチャの関数を原子的に置換する
+- DROP → CREATE の 2 段だと一瞬でも関数が消える瞬間があり、その間に呼び出しが来ると失敗する（本番運用では 0 秒でも避けたい）
+
+**適用時の SQL**:
+0006 migration は `CREATE OR REPLACE FUNCTION` で書かれているため、**ファイルの SQL をそのまま Supabase SQL Editor で実行できる**。本番に broken 版が存在していても同一シグネチャで原子的に置換される。手作業での書き換えは不要。
+
+**適用後の再検証**:
+実行後確認 SQL の [確認 4] 4a〜4e をすべて再実行し、以下を確認する:
+- 4a: 42702 column reference ambiguous が出ず、UPSERT が INSERT 経路で成功すること
+- 4b: UPDATE 経路も正常動作すること
+- 4c-4e: 認可 NG / 許容値外 / NULL の判定は broken 版と同じく正常
+
+これらが全て通ったら段階 3（develop → main の PR マージ）へ進む。
+
+**再テスト後のクリーンアップ**:
+4a / 4b でテスト行が作られるため、UI 実測（段階 4）の前に削除して未設定状態に戻す。実測時にオーナー本人が STEP1 で選択し、初回 INSERT 経路が動作することを検証したいため。
+
+```sql
+DELETE FROM public.tenant_site_settings
+WHERE tenant_id = (SELECT id FROM public.tenants WHERE slug = 'enu');
+```
+
+削除後、enu の行が消えていることを確認する（テーブル全体の件数ではなく対象テナントで確認する。将来テナントが増えた際に他テナントの行と混同しないため）:
+
+```sql
+SELECT count(*) AS enu_rows FROM public.tenant_site_settings
+WHERE tenant_id = (SELECT id FROM public.tenants WHERE slug = 'enu');
+```
+↑ enu_rows = 0 であること。
+
+---
+
 ## タイミング（重要 — 順序を厳守する）
 
 PR8 のリリースは以下 5 段階の順序で進める。**「DB 適用」と「UI 実測」を混同しない**（PR7 で確立した原則）。

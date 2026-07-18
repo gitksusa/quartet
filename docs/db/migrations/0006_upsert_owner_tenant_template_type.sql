@@ -111,6 +111,26 @@
 --   将来 mood 側も骨格に影響する要素を持たせる方針変更があれば、本関数と同様の
 --   DB 側検証（mood 用の書き込み RPC）を導入する。
 --
+-- 【RETURNS TABLE の出力列名と SQL 文中の列名の衝突に注意】
+--   plpgsql の RETURNS TABLE(col ...) は関数内で col を出力変数として暗黙宣言する。
+--   そのため INSERT / UPDATE / ON CONFLICT / RETURNING / SELECT 内で同名の列を
+--   参照すると 42702 column reference is ambiguous になる。本関数では
+--   RETURNS TABLE(tenant_id uuid) と tenant_site_settings.tenant_id が衝突したため、
+--   ON CONFLICT は列指定ではなく ON CONSTRAINT tenant_site_settings_pkey を使う。
+--   以降の書き込み系 plpgsql 関数でも、出力列名とテーブル列名の衝突有無を必ず確認し、
+--   ON CONFLICT は可能な限り ON CONSTRAINT を用いること。
+--   （#variable_conflict use_column は関数全体の解決規則を変えるため、局所的な
+--     曖昧さが残る場合のみ限定的に採用する）
+--
+-- 【本ファイルが CREATE OR REPLACE FUNCTION を使う理由】
+--   0003 / 0004 / 0005 は CREATE FUNCTION を使っているが、本ファイルのみ
+--   CREATE OR REPLACE FUNCTION を使う。初回適用時に ON CONFLICT (tenant_id) の
+--   曖昧参照バグ（42702）を含む版を本番へ適用してしまい、同一シグネチャのまま
+--   置換する必要が生じたため。CREATE OR REPLACE は関数を原子的に差し替えるので、
+--   DROP → CREATE のように「一瞬関数が消える」瞬間が発生しない。
+--   ファイルの SQL をそのまま本番で実行できる状態を保つことを優先した判断であり、
+--   0007 以降の新規関数で CREATE FUNCTION に戻すかは別途判断する。
+--
 -- 【前提（実行前に確認）】
 --   1. 0001 が適用済み（tenant_site_settings テーブルが存在する）
 --   2. 0003 / 0004 / 0005 の関数が既に存在（同じ設計思想の続きとして書かれている）
@@ -140,6 +160,11 @@
 --                   'get_owner_tenant_for_workos_user',
 --                   'get_owner_tenant_site_settings_for_workos_user');
 
+-- [前提確認 4] PK 制約名の確認（ON CONFLICT ON CONSTRAINT で使用）
+-- SELECT conname FROM pg_constraint
+-- WHERE conrelid = 'public.tenant_site_settings'::regclass AND contype = 'p';
+-- ↑ tenant_site_settings_pkey であること。異なる場合は関数の ON CONSTRAINT 名を実値に合わせる。
+
 -- [冪等性確認] 本関数が既に存在する場合は実行しない
 -- SELECT proname FROM pg_proc
 --   JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid
@@ -151,7 +176,7 @@
 -- 1. public.upsert_owner_tenant_template_type_for_workos_user() SECURITY DEFINER 関数
 -- ================================================================
 
-CREATE FUNCTION public.upsert_owner_tenant_template_type_for_workos_user(
+CREATE OR REPLACE FUNCTION public.upsert_owner_tenant_template_type_for_workos_user(
   p_workos_user_id text,
   p_tenant_slug    text,
   p_template_type  text
@@ -198,9 +223,14 @@ BEGIN
   END IF;
 
   -- UPSERT（1 テナント 1 行を担保する PK 制約に依拠）
+  --
+  -- ON CONFLICT の指定は列名（tenant_id）ではなく制約名（tenant_site_settings_pkey）を使う。
+  -- 理由: 本関数の RETURNS TABLE(tenant_id uuid) が同名の暗黙出力変数を宣言するため、
+  -- ON CONFLICT (tenant_id) では 42702 column reference is ambiguous になる。
+  -- 詳細はファイルヘッダー【RETURNS TABLE の出力列名と SQL 文中の列名の衝突に注意】参照。
   INSERT INTO public.tenant_site_settings (tenant_id, template_type, created_at, updated_at)
   VALUES (v_tenant_id, p_template_type, now(), now())
-  ON CONFLICT (tenant_id) DO UPDATE
+  ON CONFLICT ON CONSTRAINT tenant_site_settings_pkey DO UPDATE
     SET template_type = EXCLUDED.template_type,
         updated_at    = now();
 
@@ -254,7 +284,8 @@ GRANT  EXECUTE ON FUNCTION public.upsert_owner_tenant_template_type_for_workos_u
 --   SELECT template_type FROM public.tenant_site_settings WHERE tenant_id = (
 --     SELECT id FROM public.tenants WHERE slug = 'enu'
 --   );
---   ↑ template_type = 'atmosphere' が入っていること。
+--   ↑ template_type = 'atmosphere' が入っていること。42702 column reference
+--     ambiguous が出ないこと（ON CONFLICT ON CONSTRAINT で衝突回避済み）。
 --
 --   -- 4b. 認可 OK + 別の許容値 → UPDATE 経路の確認
 --   SELECT * FROM public.upsert_owner_tenant_template_type_for_workos_user(
