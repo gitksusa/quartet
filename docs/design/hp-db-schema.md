@@ -82,6 +82,16 @@ custom_domain       text
 
 **コンテンツの SSOT は `tenant_sections`（次節）であり、`tenant_site_settings.template_type` / `mood` はあくまで「見せ方・レイアウト選択」に限定する。** テンプレ・mood を変えてもコンテンツ自体（テキスト・画像）は変わらない、という原則をテーブル構造でも表現する。
 
+### mood カラムの追加設計（0007 で実装）
+
+- `mood text NULL`（列挙は DB 側で行わない・許容値管理は `src/lib/constants/site-settings.ts` の `MOODS` 定数）
+- CHECK 制約 `tenant_site_settings_mood_length_check`: `mood IS NULL OR char_length(mood) BETWEEN 1 AND 50`
+- **mood 保存 RPC は UPDATE 専用**（PR9 の `update_owner_tenant_mood_for_workos_user`）: INSERT はしない。理由は `tenant_site_settings.template_type` が NOT NULL のため、site_settings 行未作成のテナントで mood だけを UPSERT すると `23502 not_null_violation` になる。PR8 の 0006（`upsert_owner_tenant_template_type_for_workos_user`）が行を作成し、PR9 はその既存行の mood を UPDATE する、という役割分担
+- 認可 OK でも site_settings 行が未作成の場合は 0 行返却（認可 NG と同じ扱い・案 P）。UI 側で `currentTemplateType === null` 時に事前 disabled して防御（詳細は 0007 SQL ヘッダ【UPDATE 専用にする設計判断】参照）
+- mood の NULL 扱いは 2 箇所で意味が異なる（列制約は NULL 許容 / RPC 引数検証は NULL 拒否）。詳細は 0007 SQL ヘッダ【mood の NULL 扱いは 2 箇所で意味が異なる】参照
+- **読み取り側でアプリ層定数による正規化**: DB は列挙検証しないため、`getOwnerTenantSiteSettings` は `isMoodId()` 型ガードで既知値へ正規化する。未知値は `null` 化して UI へ渡す（UI 上「未設定」表示・STEP2 で保存すれば既知値に上書きされる。これは意図した挙動: 不正値を UI で温存しない）
+- **template_type には対応する正規化を設けない**: 0006 の SECURITY DEFINER 関数が DB 側で列挙検証をしており、不正値が書き込まれる経路が存在しない（mood との非対称は意図的）
+
 ---
 
 ## 1.5 `tenant_site_settings` に追加する店舗基本情報カラム

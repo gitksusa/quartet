@@ -2,18 +2,9 @@
 
 import { useState, useTransition } from 'react'
 
+import { TEMPLATE_TYPES, type TemplateTypeId } from '@/lib/constants/site-settings'
+
 import { saveTemplateAction } from './actions'
-
-const TEMPLATES = [
-  { id: 'atmosphere', name: 'Atmosphere（世界観型）' },
-  { id: 'gallery',    name: 'Gallery（作品型）' },
-  { id: 'staff',      name: 'Staff / Artist（人物型）' },
-  { id: 'conversion', name: 'Menu / Conversion（予約特化型）' },
-  { id: 'trust',      name: 'Trust / Treatment（信頼・技術型）' },
-  { id: 'brand',      name: 'Brand / Multi Service（ブランド・複数サービス型）' },
-] as const
-
-type TemplateId = (typeof TEMPLATES)[number]['id']
 
 export function Step1TemplatePicker({
   tenantSlug,
@@ -22,9 +13,9 @@ export function Step1TemplatePicker({
   tenantSlug: string
   currentTemplateType: string | null
 }) {
-  const [selected, setSelected] = useState<TemplateId | null>(
-    TEMPLATES.some((t) => t.id === currentTemplateType)
-      ? (currentTemplateType as TemplateId)
+  const [selected, setSelected] = useState<TemplateTypeId | null>(
+    TEMPLATE_TYPES.some((t) => t.id === currentTemplateType)
+      ? (currentTemplateType as TemplateTypeId)
       : null,
   )
   const [isPending, startTransition] = useTransition()
@@ -33,7 +24,7 @@ export function Step1TemplatePicker({
   return (
     <div className="space-y-4">
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {TEMPLATES.map((tpl) => {
+        {TEMPLATE_TYPES.map((tpl) => {
           const isSelected = selected === tpl.id
           return (
             <li key={tpl.id}>
@@ -44,11 +35,18 @@ export function Step1TemplatePicker({
                 className={
                   'w-full rounded-md border p-4 text-left transition-colors ' +
                   (isSelected
-                    ? 'border-gray-900 bg-gray-50 ring-2 ring-gray-900'
-                    : 'border-gray-200 hover:border-gray-400')
+                    ? 'border-gray-900 bg-gray-900 text-white'
+                    : 'border-gray-200 text-gray-900 hover:border-gray-400')
                 }
               >
-                <span className="block font-mono text-xs text-gray-500">{tpl.id}</span>
+                <span
+                  className={
+                    'block font-mono text-xs ' +
+                    (isSelected ? 'text-gray-300' : 'text-gray-500')
+                  }
+                >
+                  {tpl.id}
+                </span>
                 <span className="mt-1 block text-sm font-medium">{tpl.name}</span>
               </button>
             </li>
