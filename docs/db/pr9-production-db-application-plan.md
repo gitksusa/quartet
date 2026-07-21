@@ -16,8 +16,9 @@ PR9 のコード（`src/lib/tenant/site-settings.ts` の `saveOwnerTenantMood()`
 - `tenant_site_settings.mood` カラム（`0007` で ALTER TABLE 追加）+ CHECK 制約 `tenant_site_settings_mood_length_check`
 
 本番 DB に `0007` の変更が反映されない状態で PR9 のコードが main へ出ると、次の症状が発生する:
-- `/admin/[tenantSlug]` の初期表示: 置換前の 0005 は 2 列しか返さないため、helper 側の destructure で `mood` が undefined となり型不整合。実行時エラー（500）またはビルド時型エラー
-- STEP2 の保存: update RPC 未存在で Server Action エラー
+- `/admin/[tenantSlug]` の初期表示: 置換前の 0005 は 2 列（tenant_id, template_type）しか返さないため、helper 側の destructure で `mood` は `undefined` になる。`getOwnerTenantSiteSettings` の `isMoodId()` 正規化で `undefined !== null` の枝を通らず結果 `null` として扱われる。ダッシュボードのサイト設定は「mood: 未設定」表示となり、**初期表示は即座には壊れない**（型エラーにもならない・型は `string | null` を許容）
+- **確実に失敗するのは STEP2 の保存時**: `update_owner_tenant_mood_for_workos_user` が未作成のため、Supabase RPC 呼び出しが `42883 undefined_function` エラーで失敗し、Server Action が error boundary へ throw する
+- したがって「初期表示は動くが保存だけ壊れる」半分故障状態になる。UX 上分かりにくい壊れ方であり、`0007` の適用は main デプロイ前という原則は変わらない
 
 ---
 
