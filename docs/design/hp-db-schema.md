@@ -288,7 +288,9 @@ deleted_at      timestamptz （nullable, soft delete）
 
 - 対象ロール: 認証済みユーザーのうち、当該 `tenant_id` の owner/admin であるユーザーのみ
 - INSERT / UPDATE / DELETE をこの条件で許可
-- **この write policy は WorkOS AuthKit によるテナント認証が完成して初めて意味を持つ。** 現時点（認証未実装）では、書き込みは Claude Code・管理者操作（service_role 経由）に限定される前提とし、エンドユーザー向けの write policy 本体は **認証実装フェーズで確定・有効化する**。
+- **現状の実装**: WorkOS AuthKit による認証は実装済み（Phase 0b 本番稼働）。管理画面（`/admin/[tenantSlug]`）からの書き込みは、RLS の write policy ではなく **SECURITY DEFINER 関数**（`0006`: template_type の UPSERT / `0007`: mood の UPDATE）による認可付き書き込みで実現している。認可は必ず `workos_user_id` を起点に判定し、URL 由来の `tenant_slug` からは検索しない（起点方向の制約）
+- **service_role キーはアプリコードで使用しない**。DB への直接操作は migration の適用に限る（Supabase Dashboard の SQL Editor 経由）
+- エンドユーザー向けの RLS write policy 本体は、公開ページ側の要件が固まる段階で改めて設計する
 
 ### 現時点の扱い
 
