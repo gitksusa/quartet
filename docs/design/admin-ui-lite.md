@@ -64,6 +64,7 @@
 - 画面右側に**常時リアルタイムプレビュー**（下書き `content` を反映）
 - 選択で `tenant_site_settings.template_type` に保存
 - テンプレ変更で content は不変（`hp-db-schema.md` の「テンプレート変更時の挙動」参照）
+- 選択中カードは反転色（背景 gray-900・文字 white）で強調表示
 
 ### STEP2: mood 選択
 
@@ -71,8 +72,10 @@
 
 **体験仕様**:
 - 「このテンプレへのおすすめ mood」を先頭に表示（初期は定数「おすすめ」・後続で「人気」へ移行・詳細は `hp-template-patterns.md` の「おすすめ/人気ランキング」参照）
-- 選択で即プレビュー反映（CSS 変数のみ差替）
+- 選択で即プレビュー反映（CSS 変数のみ差替・**PR9 では実装しない**: mood トークンの CSS 変数実装は消費側の公開 HP レンダリング実装時に後続 PR でまとめる）
 - 選択で `tenant_site_settings.mood` に保存
+- STEP1 未完了時（`currentTemplateType === null`）は STEP2 を表示するが保存ボタン disabled。「先に STEP1 でテンプレートを保存してください」の案内を表示。おすすめ順位は不明のため、mood はデフォルト順（`src/lib/constants/site-settings.ts` の `MOODS` 順）で表示
+- 選択中カードは STEP1 と同じ反転色で強調表示
 
 ### STEP3: セクション ON/OFF ＋ 階層入力
 

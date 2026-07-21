@@ -1,6 +1,7 @@
 import { getOwnerTenantSiteSettings } from "@/lib/tenant/site-settings";
 
 import { Step1TemplatePicker } from "./step1-template-picker";
+import { Step2MoodPicker } from "./step2-mood-picker";
 
 const COMMON_SECTIONS = [
   "hero",
@@ -23,7 +24,7 @@ export default async function AdminTenantDashboardPage({
   params: Promise<{ tenantSlug: string }>;
 }) {
   const { tenantSlug } = await params;
-  const { templateType } = await getOwnerTenantSiteSettings(tenantSlug);
+  const { templateType, mood } = await getOwnerTenantSiteSettings(tenantSlug);
 
   return (
     <main className="mx-auto max-w-6xl p-8">
@@ -39,6 +40,10 @@ export default async function AdminTenantDashboardPage({
           <dd className="text-gray-900">
             {templateType ?? <span className="text-gray-400">未設定</span>}
           </dd>
+          <dt className="text-gray-500">mood</dt>
+          <dd className="text-gray-900">
+            {mood ?? <span className="text-gray-400">未設定</span>}
+          </dd>
         </dl>
       </section>
 
@@ -47,6 +52,15 @@ export default async function AdminTenantDashboardPage({
         <Step1TemplatePicker
           tenantSlug={tenantSlug}
           currentTemplateType={templateType}
+        />
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold">STEP2: mood 選択</h2>
+        <Step2MoodPicker
+          tenantSlug={tenantSlug}
+          currentTemplateType={templateType}
+          currentMood={mood}
         />
       </section>
 

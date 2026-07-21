@@ -27,7 +27,7 @@
 管理画面（`/admin/[tenantSlug]`）の実装は段階分解する。各 PR の詳細は `docs/design/admin-ui-lite.md` の「実装の分割方針」参照。
 
 - **PR8**: テンプレート選択の保存（STEP1）
-- **PR9**: mood 選択の保存（STEP2）＋ mood トークン初期セット
+- **PR9**: mood 選択の保存（STEP2）。mood トークン（CSS 変数セット）の実装は公開 HP レンダリング実装時にまとめる（消費側がない段階では実装しない）
 - **PR10**: セクション ON/OFF（STEP3 の骨格・`tenant_sections.is_visible` の切替）
 - **PR11+**: セクション階層入力（`content` JSON ＋ 自動保存）
 - **後続**: 画像管理（STEP4）/ 下書き/公開分離の完了ボタン / STEP0 店舗基本情報の初回入力 / おすすめ/人気ランキングの集計関数

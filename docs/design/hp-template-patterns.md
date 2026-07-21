@@ -59,7 +59,7 @@ DB 側の対応は `hp-db-schema.md` の 1 節参照（`tenant_site_settings` �
 
 mood は「雰囲気」を CSS 変数セット（デザイントークン）で表現する。初期セットは 3〜5 個程度で開始し、実運用で追加要望が出た段階で 1 個ずつ増やす。
 
-### 初期セット（想定・PR9 実装時に確定）
+### 初期セット（PR9 で確定）
 
 | mood 識別子 | 想定される印象 |
 |---|---|
@@ -67,7 +67,7 @@ mood は「雰囲気」を CSS 変数セット（デザイントークン）で�
 | `natural` | 柔らか・木質感・アイボリー基調 |
 | `elegant` | 高級・落ち着き・深色 |
 
-（識別子は英語スネークケース。表示ラベルの日本語は管理画面側で持つ。この節は実装 PR で確定するため上記は例示）
+識別子は英語スネークケース。表示ラベルの日本語は `src/lib/constants/site-settings.ts` の `MOODS` 定数で持つ。
 
 ### 各 mood が持つ CSS 変数（粒度）
 
@@ -83,8 +83,10 @@ mood は「雰囲気」を CSS 変数セット（デザイントークン）で�
 
 ### 管理方針
 
-- 許容値は **Zod で管理**。Postgres enum は使わない（原則 3 と同じ）
-- 追加時のフロー: (1) Zod 列挙値に 1 値追加 → (2) CSS 変数トークンセット 1 個追加 → (3) 管理画面の mood 選択 UI に自動反映。**migration 不要・DB 変更なし**
+- **列挙値の管理はアプリ層**: `src/lib/constants/site-settings.ts` の `MOODS` 定数（TS `as const` union）を Source of Truth とする。Postgres enum は使わない（原則 3 と同じ）。Zod 化は PR11+ で検討
+- **補助的な NULL / 長さ検証は DB 側にも置く**: 0007 の CHECK 制約 `tenant_site_settings_mood_length_check` により `mood` は NULL 許容、非 NULL 時は 1〜50 文字。列挙は DB 側で行わない（`docs/db/migrations/0007_add_mood_replace_read_and_add_update_rpc.sql` ヘッダ【mood の DB 側検証】参照）
+- **読み取り側の正規化**: DB 側で列挙検証しないため、`getOwnerTenantSiteSettings` は `isMoodId()` 型ガードで既知値へ正規化する（未知値は null 化・UI 上「未設定」表示・STEP2 で保存すれば既知値に上書きされる）
+- 追加時のフロー: (1) `MOODS` 定数に 1 値追加 → (2) CSS 変数トークンセット 1 個追加（トークン実装後）→ (3) 管理画面の mood 選択 UI に自動反映。**migration 不要**
 
 ### 独立化トリガー（将来）
 
