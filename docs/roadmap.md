@@ -12,7 +12,8 @@
 
 | Phase | 項目 | status | メモ |
 |---|------|--------|------|
-| 0 | enu HP | in_progress | React コンポーネント。ON/OFFは `tenants.is_recruit_enabled` のみ。求人ページは既存（HPの1ブロック） |
+| 0a | enu HP（静的実装） | completed | 求人ページ本体の公開は `tenants.is_recruit_enabled` で制御 |
+| 0b | Lite CMS・認証・テナント管理画面 | in_progress | 固定テンプレート選択とHP内セクション表示切替（`tenant_sections.is_visible`）。詳細は下記PR分解 |
 | 1 | 問い合わせ / 予約リクエスト受付 | pending | **DB保存 → 通知メール**。保存先は薄い Next.js API Route + Supabase（**Goはまだ使わない**）。問い合わせと予約リクエストは同じ「フォーム受付＋DB保存」パターン |
 
 ### ⚠ Phase 1 の予約は「予約リクエスト方式」のみ — 明文化（暴走防止）
@@ -28,7 +29,7 @@
 
 - **PR8**: テンプレート選択の保存（STEP1）
 - **PR9**: mood 選択の保存（STEP2）。mood トークン（CSS 変数セット）の実装は公開 HP レンダリング実装時にまとめる（消費側がない段階では実装しない）
-- **PR10**: セクション ON/OFF（STEP3 の骨格・`tenant_sections.is_visible` の切替）。UI 仕上げフェーズの凍結ルールに従い、既存のカード / ボタンパターンを流用し新規 UI パターンを追加しない
+- **PR10**: owner 認可のうえで表示・非表示両方の `tenant_sections` を取得し、管理画面で表示・`is_visible` 切替・保存を行う。切替範囲と対象外機能は `docs/design/admin-ui-lite.md` の PR10 節に従う。UI 仕上げフェーズの凍結ルールに従い、既存のカード / ボタンパターンを流用し新規 UI パターンを追加しない
 - **PR11+**: セクション階層入力（`content` JSON ＋ 自動保存）。同じく UI 仕上げフェーズの凍結ルールを適用
 - **後続**: 画像管理（STEP4）/ 下書き/公開分離の完了ボタン / STEP0 店舗基本情報の初回入力（**住所入力 API の採否を判断する**・詳細は `docs/design/admin-ui-lite.md` の STEP0 節および「外部 API の採否メモ」参照）/ おすすめ/人気ランキングの集計関数
 - **UI 仕上げフェーズ（ウィザードリビルド）**: 着手は公開 HP レンダリング実装と同一フェーズ。含まれるもの: ウィザードのレイアウト刷新（退避カード + プレビュー）/ プレビュー表示 / モーション設計 / 管理画面テーマトークン（`--admin-*`）/ mood トークン（`--mood-*`）。詳細は `docs/design/admin-ui-lite.md` の「UI 仕上げフェーズ」節参照
@@ -61,8 +62,8 @@
 | 6 | カルテ（Record / Consultation） | planned | Reservation とドメイン分離・UIのみ顧客中心統合。**狙うのがサロンかクリニックかを NEXT までに見極めてから** |
 | 7 | 共通化分析 | planned | 実店舗を2〜3件作って共通ブロックを抽出してから |
 | 8 | page_blocks | planned | テーブル定義は database.md に温存。**実装は editor と同時（ここまで作らない）** |
-| 9 | template system | planned | |
-| 10 | block editor（ドラッグ&ドロップ・ON/OFF UI・テーマ） | planned | 最後 |
+| 9 | 汎用 template system | planned | Phase 0b の事前定義テンプレート選択とは別 |
+| 10 | block editor（自由配置・ドラッグ&ドロップ・汎用編集） | planned | 最後 |
 | 11 | Phase2 インフラ（ECS Fargate / RDS Multi-AZ / Prometheus+Grafana / SSM） | planned | 10〜50店舗規模で Terraform 無停止移行 |
 | 12 | CQRS | planned | v2・トラフィック増加後 |
 

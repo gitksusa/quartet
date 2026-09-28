@@ -19,7 +19,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: '川越のネイリスト求人 | 未経験歓迎・正社員募集のネイルサロンenu',
-  description: '埼玉県・本川越駅すぐのネイルサロンenuでは、正社員ネイリスト（アシスタント）を求人中！未経験歓迎・ネイルスクール卒業の方も安心の研修あり。ニュアンス、韓国、アートなど最新トレンドネイルが学べます。試用期間1,150円〜。',
+  description: '埼玉県・本川越駅すぐのネイルサロンenuでは、正社員ネイリスト（アシスタント）を求人中！未経験歓迎・ネイルスクール卒業の方も安心の研修あり。ニュアンス、韓国、アートなど最新トレンドネイルが学べます。試用期間は時給1,200円～。',
 };
 
 type Props = {
@@ -41,7 +41,7 @@ const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = 
   { 
     label: "雇用形態", 
     items: [
-      <span key="1" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-semibold">正社員</span>
+      <span key="1" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-semibold">正社員<br />（試用期間3ヶ月あり）</span>
     ],
     icon: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.5c0-2.33 4.67-3.5 7-3.5s7 1.17 7 3.5v.5z"
   },
@@ -49,37 +49,39 @@ const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = 
     label: "給与", 
     items: [
       <span key="1" className="block text-[14px] md:text-[1rem] text-[#2c221a] font-bold mb-4 border-b border-[#eadecf] pb-2 inline-block">
-        試用期間：時給 1,150円〜
+        ・試用期間<br />
+        時給 1,200円～
       </span>,
       <span key="2" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">
-        未経験
+        ・未経験
       </span>,
       <span key="3" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-4">
-        <span className="font-semibold">月給 210,000円〜</span>
+        <span className="font-semibold">月給 225,000円～</span>
       </span>,
       <span key="4" className="block text-[13px] md:text-[0.95rem] text-[#2c221a] font-bold mb-1">
-        経験者
+        ・経験者
       </span>,
       <span key="5" className="block text-[13px] md:text-[0.95rem] text-[#2c221a]/90 pl-3 md:pl-4 mb-4">
-        <span className="font-semibold">月給 220,000円〜</span>
+        <span className="font-semibold">月給 235,000円～</span>
+        <span className="block text-[12px] md:text-[13px] mt-1">※1年以上の経験者の方は、これまでの経験・技術・実績等を考慮し決定します。</span>
       </span>,
       <span key="6" className="block text-[#8e735b] text-[12px] md:text-[13px] font-bold bg-[#8e735b]/5 border border-[#8e735b]/20 rounded-lg px-3 py-1.5 inline-block tracking-wide mt-1">
-        ※技術・売上に応じて優遇あり◎
+        ※売上に準じて歩合給あり
       </span>
     ],
     icon: "M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 3.98 2.53.47 3 1.34 3 2.34 0 1.05-.78 1.92-3 1.92-2.19 0-3-.99-3.11-2.2H4.04c.09 1.97 1.45 3.48 3.46 3.97V21h3v-2.13c2.02-.35 3.5-1.5 3.5-3.55 0-2.54-1.97-3.32-4.7-3.82z"
   },
   { 
     label: "待遇・福利厚生", 
-    items: ["社会保険完備", "歩合給あり", "昇給随時", "交通費支給（1万円まで）"].map((text, i) => (
-      <span key={i} className="block text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
+    items: ["・雇用保険", "・社会保険完備\n（全メニューデビュー後）", "・歩合給あり", "・昇給あり\n（半年に一度）", "・交通費（月1万円まで）"].map((text, i) => (
+      <span key={i} className="block whitespace-pre-line text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
     )),
     icon: "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
   },
   { 
     label: "休日", 
-    items: ["完全週休2日制", "年末年始休暇あり（12/31〜1/3）", "有休完全消化", "土日希望休相談可◎"].map((text, i) => (
-      <span key={i} className="block text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
+    items: ["・月10日休み\n（2,7,8,12月は月8日休み）", "・完全週休2日制", "・年末年始休暇あり\n（12/31〜1/3）", "・土日希望休相談可◎"].map((text, i) => (
+      <span key={i} className="block whitespace-pre-line text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
     )),
     icon: "M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5z"
   },
@@ -92,7 +94,7 @@ const jobDetails: { label: string; items: React.ReactNode[]; icon: string }[] = 
   },
   { 
     label: "勤務時間", 
-    items: ["平日 11:00〜20:00", "土日祝 9:30〜18:30", "シフト制"].map((text, i) => (
+    items: ["10:00～20:00 シフト制", "（実働8時間・休憩1時間）"].map((text, i) => (
       <span key={i} className="block text-[13px] md:text-[0.95rem] mb-1.5 text-[#2c221a] font-semibold">{text}</span>
     )),
     icon: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"

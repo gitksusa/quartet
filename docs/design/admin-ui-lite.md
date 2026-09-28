@@ -41,6 +41,8 @@
 
 ## STEP 構成（4 ステップ + STEP0）
 
+以下は後続実装を含む体験仕様であり、実装順序は「実装の分割方針」と `docs/roadmap.md` に従う。現在はSTEP1・STEP2の保存まで実装済み。
+
 管理画面は STEP0 と STEP1〜STEP4 の合計 5 段階で構成される。画面遷移はなく、同一ルート `/admin/[tenantSlug]` 内で STEP を進行する。
 
 過去に完了した STEP は**左端に細く畳まれて積み重なり**、いつでもクリックして戻り部分修正できる。他の STEP の入力内容は保持される。
@@ -90,7 +92,7 @@
 **責務**: 12 セクションの表示切替と content 入力。
 
 **体験仕様**:
-- 12 セクション（`hp-template-patterns.md` の共通セクションID）の ON/OFF トグル（`tenant_sections.is_visible` を切替）
+- 12 セクションを管理する。PR10の切替範囲は `hp-template-patterns.md` の共通セクションID節に従い、`hero` を常時表示、他11個を ON/OFF 対象とする
 - ON にしたセクションは吹き出し UI で階層入力（固定項目型 / 可変配列型 / 画像主体型の 3 パターン。詳細は `hp-db-schema.md` 2.1 節）
 - 可変配列型（features / staff / voice / faq / menu）は「+追加」で小見出しが増える
 - 入力済みの小見出しは**緑チェック**で状態を明示
@@ -132,7 +134,7 @@
 
 ---
 
-## 自動保存・下書き/公開分離
+## 自動保存・下書き/公開分離（後続実装・PR10対象外）
 
 管理画面の編集は**自動保存**を基本とし、公開は明示的な「完了」ボタンで行う。
 
@@ -165,19 +167,21 @@ Phase 0b の管理画面実装は複数の小 PR に段階分解する。**1 PR 
 
 - `/admin/[tenantSlug]` の 1 画面内で STEP1（テンプレ選択）のみを動作させる
 - 選択結果を `tenant_site_settings.template_type` に保存する Server Action を追加
-- プレビュー機能は最小限（画像なし・content 空でも骨格が描画される程度）
+- プレビューは後続の公開HP描画・UI仕上げフェーズで実装する
 
-### PR9: mood 選択の保存（STEP2）＋ mood トークン初期セット
+### PR9: mood 選択の保存（STEP2）
 
 - STEP2（mood 選択）を追加
-- mood トークン初期セット（3〜5 個・詳細は `hp-template-patterns.md`）を CSS 変数として実装
+- mood トークンの CSS 変数実装は公開HP描画・UI仕上げフェーズに回す
 - 「おすすめ」定数の表示（実データ集計はまだ）
 
 ### PR10: セクション ON/OFF（STEP3 の骨格・階層入力なし）
 
-- 12 セクションの ON/OFF トグルを実装
-- ON/OFF は `tenant_sections.is_visible` に保存
-- content の階層入力はまだ実装しない
+- **対象**: `tenant_sections` の取得、管理画面での12セクション表示、`is_visible` の切替・保存。`hero` は常時表示・OFF不可、他11個は切替可能（ADR-007）。
+- owner 認可済みの管理画面では visible / hidden の両方を取得できること。公開用の `is_visible = true` の read policy を管理画面の取得経路に流用しない。認可方式は `auth-tenant-access-control.md` §4 を参照。
+- DBの `display_order` は維持し、固定順または既存 `display_order` 順で表示する。既存カード・ボタンパターンを流用する。
+- **対象外**: セクション内容編集、画像管理、並べ替えUI、自由配置、汎用ブロックエディタ、公開HP描画、moodトークン反映、プレビュー、下書き／公開分離。
+- PR10は表示状態の保存までを扱う。公開反映や公開操作との関係は後続の公開HP・下書き／公開分離設計で扱う。
 
 ### PR11+: セクション階層入力（content JSON ＋ 自動保存）
 

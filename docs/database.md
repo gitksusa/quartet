@@ -3,7 +3,9 @@
 ## 1. 共通設計ルール
 
 ### 1.1 必須共通カラム
-システムテーブル（`users`, `tenants`）を除く、すべてのドメインテーブルに以下のカラムを必須とする。
+システムテーブル（`users`, `tenants`）を除くドメインテーブルは、原則として以下の共通カラムを持つ。
+
+**Phase 0bの既存例外**: `tenant_site_settings` は `tenant_id` 自体をPKとし、独立した `id` と `deleted_at` を持たない。`tenant_sections` も `deleted_at` を持たず、非表示は `is_visible` で表す。この2テーブルはsoft delete前提の部分一意を使わず、前者はPK、後者は `(tenant_id, section_id)` の通常の一意インデックスを維持する。詳細は `docs/design/hp-db-schema.md` を参照し、既存DBを旧原則に戻さない。
 
 | カラム名 | 型 | 制約 | 説明 |
 |:---|:---|:---|:---|
@@ -29,7 +31,7 @@ $$ language 'plpgsql';
 ※各テーブル作成後、必ず `CREATE TRIGGER` を適用すること。（後述）
 
 ### 1.3 Soft Delete × 部分一意インデックス
-通常の `UNIQUE` 制約は使用せず、生存データ（`deleted_at IS NULL`）のスコープ内でのみ
+soft deleteを持つテーブルの業務上の一意性には、通常の `UNIQUE` 制約を使用せず、生存データ（`deleted_at IS NULL`）のスコープ内でのみ
 一意性を保証する部分一意インデックス（Partial Unique Index）を厳格に適用する。
 
 ### 1.4 テーブル作成時の必須5ステップ（順序厳守）
@@ -47,7 +49,7 @@ $$ language 'plpgsql';
 ## 2. 認証・認可・マルチテナント基盤 (RLS)
 
 ### 2.1 RLS抽出ヘルパー関数
-WorkOSのJWTから `tenant_id` を安全に抽出する関数。
+以下は将来のJWT連携用の参照定義。Phase 0bの現行方式はセッション由来のWorkOS user.idを専用RPCに渡してowner確認する。WorkOSログインはSupabaseの `authenticated` と同義ではなく、0002の適用もPR10の前提ではない。詳細は `docs/design/auth-tenant-access-control.md` §4を参照。
 
 ```sql
 CREATE OR REPLACE FUNCTION auth.current_tenant_id()
@@ -296,7 +298,7 @@ CREATE INDEX sales_tenant_date_idx
 HP・求人ページのブロック構成（並べ替え順・ON/OFF）をテナントごとに保存する想定のテーブル。
 
 **v1では作らない。** v1のHPは props 化した React コンポーネントで構成し、
-セクションの ON/OFF は `tenants` の boolean フラグ（`is_recruit_enabled` 等）で制御する。
+Phase 0bのHP内セクションの表示状態は `tenant_sections.is_visible` で管理する。求人ページ本体の公開フラグとは分離する（`docs/design/hp-db-schema.md` 参照）。
 ブロックエディタUI（ドラッグ並べ替え・ON/OFF・テーマ切替）を作る最終フェーズ
 （roadmap.md の page_blocks / block editor フェーズ）で、下記のコメントアウトを解除する。
 
@@ -455,7 +457,7 @@ CREATE POLICY sales_isolation_policy ON sales
 
 ### v後半：ブロックエディタ
 - `page_blocks` テーブルのコメントアウトを解除し、トリガーとRLSを追加する
-- それまでは HP は React コンポーネント、ON/OFF は `tenants` の boolean フラグで制御
+- Phase 0bは固定Reactコンポーネントと `tenant_sections.is_visible` による表示切替。自由配置・並べ替えUIはこの後続フェーズで扱う
 
 ### v2：カウンセリング機能
 - `consultation_items`・`consultations`テーブルのコメントアウトを解除する
