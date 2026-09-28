@@ -42,16 +42,16 @@ template_3_staff_message
 
 ### 原則3: テンプレート数は6個で固定
 
-7個以上には増やさない。柔軟性はテンプレート追加ではなく、各テンプレート内のセクションON/OFF・並び順で出す。
+7個以上には増やさない。柔軟性はテンプレート追加ではなく、各テンプレート内のセクションON/OFFと事前定義の並び順で出す。自由な並べ替えUIはPR10の対象外。
 
 ### 原則4: テンプレートと mood は独立 2 軸
 
 - **テンプレ = HTML 骨格**（セクション並び・強調度・全体構造）
 - **mood = デザイントークン**（CSS 変数セット：色・フォント・角丸・影・余白）
 
-全 mood は全テンプレートで自由に組み合わせ可能とする。組み合わせの実装コストは 6×N ではなく **6+N** に抑えられる（テンプレ追加は骨格 1 パターン追加、mood 追加は Zod 許容値 + トークンセット 1 個追加のみ・migration 不要）。
+全 mood は全テンプレートで自由に組み合わせ可能とする。組み合わせの実装コストは 6×N ではなく **6+N** に抑えられる（テンプレ追加は骨格 1 パターン追加、mood 追加は MOODS 許容値 + トークンセット 1 個追加のみ・migration 不要）。
 
-DB 側の対応は `hp-db-schema.md` の 1 節参照（`tenant_site_settings` に `template_type text` と `mood text` の 2 カラムで管理）。mood の許容値は Zod で管理し、Postgres enum は使わない（原則 3 と同じく追加時 migration 回避）。
+DB 側の対応は `hp-db-schema.md` の 1 節参照（`tenant_site_settings` に `template_type text` と `mood text` の 2 カラムで管理）。mood の許容値は `MOODS` 定数で管理し（Zod化はPR11+で検討）、Postgres enum は使わない（原則 3 と同じく追加時 migration 回避）。
 
 ---
 
@@ -79,7 +79,7 @@ mood は「雰囲気」を CSS 変数セット（デザイントークン）で�
 - **影**: box-shadow プリセット
 - **余白**: 標準の gap / padding スケール
 
-具体的な変数名・数値範囲は PR9（mood 選択実装）で確定する。原則は「テンプレの HTML 骨格を書き換えずに、CSS 変数差替えだけで見た目が変わる」こと。
+具体的な変数名・数値範囲は公開 HP レンダリングと UI 仕上げフェーズで確定する（PR9・PR10では実装しない）。原則は「テンプレの HTML 骨格を書き換えずに、CSS 変数差替えだけで見た目が変わる」こと。
 
 ### 管理方針
 
@@ -96,7 +96,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 
 ## 共通セクションID 定義
 
-全テンプレートが共有するセクションの一覧。テンプレートはこのセクション群の組み合わせ・並び順・強調度で構成される。
+全テンプレートが共有する管理対象12セクションの一覧。テンプレートはこのセクション群の組み合わせ・並び順・強調度で構成される。
 
 **重要**: `セクションID` は **安定した英語キー**である。DB に保存され、コードが参照する識別子であり、一度確定したら変更しない（変更にはマイグレーションが必要）。画面に表示する日本語ラベルは別物として扱い、このキーとは分離して管理する（表示ラベルは管理画面・公開HP側で持つ）。
 
@@ -121,7 +121,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 
 **注**: 画像分類は `.claude/playbooks/content-image-policy.md` の3分類（背景・雰囲気画像 / 実写コンテンツ / 施術結果画像）に従う。特に `gallery` で施術結果画像を扱う場合は優良誤認リスクが高いため、テナント実写真のみ・出典管理が必要。
 
-**ON/OFF とは**: 各テナントは、管理画面から各セクションを表示/非表示に切り替えられる。`reservation` のような必須級セクションを除き、原則すべてON/OFF可能とする。
+**PR10 の ON/OFF 範囲**: `hero` は常時表示・OFF不可とする。残り11セクションはON/OFF可能で、重要セクションである `reservation` / `access` も必須固定にはしない。決定理由は `docs/adr/007_phase0b_section_visibility.md` を参照。テンプレートごとの推奨構成や初期値と、OFFを許可するかどうかは区別する。
 
 ---
 
@@ -145,9 +145,9 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 `template_type` と `mood`（原則 4）は独立 2 軸だが、**許容値の管理方式は非対称**である。
 
 - `template_type`: **DB 側の書き込み関数内でも許容値検証**（`docs/db/migrations/0006_upsert_owner_tenant_template_type.sql` の `NOT IN ('atmosphere','gallery','staff','conversion','trust','brand') THEN RAISE EXCEPTION` により防御）。理由: template_type は公開 HP の描画分岐（HTML 骨格の選択）に直結し、不正値が本番 DB に入ると公開 HP のレンダリングが壊れる。anon EXECUTE の書き込み関数を通す以上、関数単体で防御する必要がある。したがってテンプレ追加時は **本関数の許容値更新 migration を伴う**
-- `mood`: **アプリ層の Zod で許容値管理・DB 検証なし**（`hp-db-schema.md` 節 1 参照）。理由: mood は CSS 変数トークンの差替のみで公開 HP の骨格には影響せず、不正値でもフォールバックで安全に処理できる。mood 追加は Zod 列挙値 + トークンセット追加のみで **migration 不要**
+- `mood`: **アプリ層の MOODS / isMoodId() で許容値管理・DBでの列挙検証なし**（`hp-db-schema.md` 節 1 参照）。理由: mood は CSS 変数トークンの差替のみで公開 HP の骨格には影響せず、不正値でもフォールバックで安全に処理できる。mood 追加は MOODS 許容値 + トークンセット追加のみで **migration 不要**
 
-この非対称性は「不正値が本番 HP のレンダリングを壊すかどうか」の影響度の差に基づく設計判断。将来 mood 側も骨格に影響する要素を持たせる方針変更があれば、DB 側検証（mood 用の書き込み RPC）を導入する。
+この非対称性は「不正値が本番 HP のレンダリングを壊すかどうか」の影響度の差に基づく設計判断。将来 mood 側も骨格に影響する要素を持たせる方針変更があれば、既存mood書き込みRPCへの列挙検証追加を再検討する。
 
 ### テンプレート1: Atmosphere（世界観型）
 
@@ -159,7 +159,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 - **Heroの見せ方**: 大きな空間写真または手元の最も美しい1枚を全画面に。テキストは最小限、余白を大胆に取る
 - **画像の使い方**: 背景・雰囲気画像を大きく。点数より質。1枚あたりの面積を大きく取る
 - **予約導線**: 控えめだが常時追従（スマホ下部固定）
-- **ON/OFF可能セクション**: gallery, voice, campaign, faq, recruit_cta
+- **任意追加・省略の推奨例（PR10の切替許可範囲ではない）**: gallery, voice, campaign, faq, recruit_cta
 - **必要な入力項目**: hero（コピー＋背景画像）、concept（本文＋画像）、menu、access、reservation
 - **共通セクションID**: hero, concept, gallery, menu, access, reservation
 - **参考サイト**: la vela tokyo, OLIVE SPA, uka
@@ -174,7 +174,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 - **Heroの見せ方**: 作品グリッドをファーストビュー近くに。Instagram的な敷き詰め
 - **画像の使い方**: gallery を主役に大量配置。**施術結果画像を扱う場合は content-image-policy の高リスク分類に該当するため、テナント実写真のみ・出典管理必須**
 - **予約導線**: ギャラリーを見た直後に予約できる導線
-- **ON/OFF可能セクション**: concept, voice, campaign, faq, recruit_cta
+- **任意追加・省略の推奨例（PR10の切替許可範囲ではない）**: concept, voice, campaign, faq, recruit_cta
 - **必要な入力項目**: hero、gallery（画像複数＋キャプション）、menu、access、reservation
 - **共通セクションID**: hero, gallery, menu, concept, access, reservation
 - **参考サイト**: DISCO, 青山ネイル
@@ -189,7 +189,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 - **Heroの見せ方**: スタッフまたは施術スタイルを大きく。人物写真を大判で
 - **画像の使い方**: staff の人物写真を大きく（実写コンテンツ）。指名予約につながる見せ方
 - **予約導線**: スタッフ指名と予約を紐付けられる導線（将来のスタッフ別予約への布石）
-- **ON/OFF可能セクション**: gallery, voice, campaign, faq, recruit_cta
+- **任意追加・省略の推奨例（PR10の切替許可範囲ではない）**: gallery, voice, campaign, faq, recruit_cta
 - **必要な入力項目**: hero、staff（氏名・肩書き・メッセージ・写真）、menu、access、reservation
 - **共通セクションID**: hero, staff, gallery, menu, access, reservation
 - **参考サイト**: SHIMA, MINX
@@ -204,7 +204,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 - **Heroの見せ方**: ファーストビュー直下にすぐ料金表と予約ボタン。迷わせない
 - **画像の使い方**: 控えめ。情報（価格・メニュー）の可読性を最優先
 - **予約導線**: 最強。全セクションから予約に飛べる。料金表の各項目に予約ボタン
-- **ON/OFF可能セクション**: gallery, concept, voice, faq, recruit_cta
+- **任意追加・省略の推奨例（PR10の切替許可範囲ではない）**: gallery, concept, voice, faq, recruit_cta
 - **必要な入力項目**: hero、menu（メニュー名・価格・説明）、campaign、access、reservation
 - **共通セクションID**: hero, menu, campaign, gallery, access, reservation
 - **参考サイト**: TRU NAIL & EYE, ALBUM
@@ -219,7 +219,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 - **Heroの見せ方**: 悩み解決・効果を訴求するコピー。信頼感のある落ち着いた画像
 - **画像の使い方**: 施術風景（実写コンテンツ）＋ voice。**効果を主張する before/after を扱う場合は content-image-policy の最高リスク分類。実写真・誇張禁止・出典/同意管理必須**
 - **予約導線**: カウンセリング予約への導線を重視
-- **ON/OFF可能セクション**: gallery, campaign, faq, recruit_cta
+- **任意追加・省略の推奨例（PR10の切替許可範囲ではない）**: gallery, campaign, faq, recruit_cta
 - **必要な入力項目**: hero、concept（悩み・効果）、voice（お客様の声）、menu、access、reservation
 - **共通セクションID**: hero, concept, gallery, voice, menu, access, reservation
 - **参考サイト**: Longleage, OLIVE SPA
@@ -234,7 +234,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 - **Heroの見せ方**: ブランド世界観を表す画像。複数サービスへの導線を整理して配置
 - **画像の使い方**: サービスカテゴリごとに代表画像。ブランドの統一感を重視
 - **予約導線**: サービス別の予約導線（メニューが多いため整理が重要）
-- **ON/OFF可能セクション**: gallery, voice, campaign, faq, recruit_cta
+- **任意追加・省略の推奨例（PR10の切替許可範囲ではない）**: gallery, voice, campaign, faq, recruit_cta
 - **必要な入力項目**: hero、concept、menu（カテゴリ別に複数サービスを表現）、access、reservation
 - **共通セクションID**: hero, concept, menu, gallery, access, reservation
 - **参考サイト**: uka, GARDEN
@@ -247,12 +247,13 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 
 ## テンプレート × セクション 対応表
 
-各テンプレートがどの共通セクションを使うか（◎=主役 / ○=使用 / △=ON/OFF任意 / −=デフォルト非表示）。
+各テンプレートがどの共通セクションを使うか（◎=主役 / ○=使用 / △=任意候補 / −=デフォルト非表示 / 未定=配置・初期値未確定）。これは推奨構成の表であり、PR10の切替許可範囲は共通セクションID節に従う。
 
 | セクション | 1 Atmosphere | 2 Gallery | 3 Staff | 4 Conversion | 5 Trust | 6 Brand |
 |-----------|:---:|:---:|:---:|:---:|:---:|:---:|
 | hero | ◎ | ○ | ◎ | ○ | ○ | ○ |
 | concept | ◎ | △ | △ | △ | ◎ | ○ |
+| features | 未定 | 未定 | 未定 | 未定 | 未定 | 未定 |
 | gallery | △ | ◎ | ○ | △ | ○ | ○ |
 | menu | ○ | ○ | ○ | ◎ | ○ | ○ |
 | staff | − | − | ◎ | − | − | △ |
@@ -263,7 +264,7 @@ mood 数が 5〜6 個を超え、各 mood のトークン仕様（変数名一�
 | faq | △ | △ | △ | △ | △ | △ |
 | recruit_cta | △ | △ | △ | △ | △ | △ |
 
-この表が、DBスキーマ設計時の「テンプレートごとのデフォルトON/OFF状態・並び順」の元データになる。
+この表はテンプレートごとの初期構成の参考とする。`features` もPR10の管理・ON/OFF対象に含むが、テンプレート別の配置・初期値はこの整合修正では確定しない。△の初期値や未作成行の扱いを含め、PR10の取得・保存設計時に確定する。DBの `display_order` は維持し、PR10は固定順または既存 `display_order` 順で表示する。並べ替えUIは後続とする。
 
 ---
 
@@ -288,14 +289,8 @@ STEP2（mood 選択）画面の傍に「このテンプレへのおすすめ moo
 
 ---
 
-## 次フェーズへの引き継ぎ（DBスキーマ設計で決めること）
+## 次フェーズへの引き継ぎ
 
-このテンプレート設計を踏まえ、次の DBスキーマ設計では以下を決める:
-
-1. テナントが選んだテンプレートをどう保持するか（`tenants.template_type` 等）
-2. 各セクションの内容（テキスト・画像URL）をどうもつか（セクション共通の保存構造）
-3. 各セクションのON/OFF状態・並び順をどうもつか
-4. 原則1（保存項目を共通化）を、テナント増加・テンプレート追加に耐える形でどう実現するか
-5. 画像URLと content-image-policy の3分類をどう紐付けるか（特に施術結果画像の出典管理）
+保存先・責務分離は `docs/design/hp-db-schema.md` を参照する。PR10では初期表示・未作成行の扱いを確定し、内容編集・画像管理・公開HP描画は後続の実装時に詳細化する。
 
 **この設計ドキュメントはまだ Draft。DBスキーマ設計の議論で、セクション定義や項目に過不足が見つかれば、ここに戻って更新する。**

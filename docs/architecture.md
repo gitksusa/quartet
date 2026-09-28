@@ -130,7 +130,7 @@ is_recruit_enabled等のbooleanカラムで制御する。
 v2以降でUnleashの導入を検討する。
 
 ## DB設計方針
-- 全テーブルにid（UUID）・created_at・updated_at・deleted_at・tenant_id必須
+- 共通カラム・soft delete・一意制約はdocs/database.md §1に従う（Phase 0bのtenant_site_settings / tenant_sectionsには既存例外あり）
 - NULL制約・型制約を必ず設定する
 - インデックス設計はクエリ設計と同時に行う
 - RLSでテナント間のデータを完全分離する

@@ -13,7 +13,7 @@
 
 ## このドキュメントの目的
 
-`docs/design/hp-template-patterns.md` で定義したテンプレート・共通セクションIDを、実際のDBスキーマに落とし込む。まだマイグレーションは実行しない。設計のみ。
+`docs/design/hp-template-patterns.md` で定義したテンプレート・共通セクションIDを、実際のDBスキーマに落とし込む。既存migrationで定義済みの項目と後続設計を区別する。PR10の範囲は `admin-ui-lite.md` のPR10節に従う。
 
 ---
 
@@ -39,6 +39,17 @@ deleted_at                    timestamptz (nullable)
 
 ---
 
+## 責務の対応
+
+| 対象 | 責務 |
+|---|---|
+| `tenant_site_settings.template_type` | 事前定義されたテンプレート選択 |
+| `tenant_site_settings.mood` | 色・フォント等の見た目 |
+| `tenant_sections` | セクションごとの内容・表示状態・順序情報 |
+| `tenant_images` | 画像とセクションの関連付け |
+| `tenants.is_recruit_enabled` | 求人ページ本体の公開制御 |
+| `recruit_cta` | HP内から求人ページへ誘導するセクション |
+
 ## 1. `template_type` と `mood` の 2 軸設計（B 案採用）
 
 テンプレート（構造・レイアウト）と mood（雰囲気：色味・質感）は**独立した 2 軸**として扱う。全 mood は全テンプレートで自由に組み合わせ可能とする。
@@ -46,7 +57,7 @@ deleted_at                    timestamptz (nullable)
 - **テンプレ = HTML 骨格**（セクション並び・強調度・全体構造）
 - **mood = デザイントークン**（CSS 変数セット：色・フォント・角丸・影・余白）
 
-この分離により、組み合わせの実装コストは 6×N ではなく **6+N** に抑えられる。テンプレ追加は HTML 骨格 1 パターン追加、mood 追加は Zod 許容値追加 + トークンセット 1 個追加のみで **migration 不要**。詳細は `hp-template-patterns.md` の「原則 4」および「mood パレット定義」節を参照。
+この分離により、組み合わせの実装コストは 6×N ではなく **6+N** に抑えられる。テンプレ追加は HTML 骨格 1 パターン追加、mood 追加は MOODS 許容値追加 + トークンセット 1 個追加のみで **migration 不要**。詳細は `hp-template-patterns.md` の「原則 4」および「mood パレット定義」節を参照。
 
 ### テーブル配置（B 案採用）
 
@@ -69,8 +80,8 @@ published_at        timestamptz
 custom_domain       text
 ```
 
-- `template_type` / `mood` はいずれも **text**。許容値は Zod（アプリ層）で管理し、**Postgres enum は使わない**（原則: 追加時に migration が必要になるのを避ける・`section_id` / `classification` と同じ方針）
-- mood を新規追加しても DB 変更は不要（Zod 列挙値 + CSS 変数トークンセット 1 つの追加のみ）
+- `template_type` / `mood` はいずれも **text**。**Postgres enumは使わない**。template_typeは0006 RPCでも列挙検証し、moodはアプリ層の `MOODS` / `isMoodId()` で許容値を管理する（Zod化はPR11+で検討）。
+- mood を新規追加しても DB 変更は不要（MOODS 許容値 + CSS 変数トークンセット 1 つの追加のみ）
 
 ### A 案（`tenants.template_type` 直置き）を却下した理由
 
@@ -128,7 +139,7 @@ nearest_station  text        -- 最寄駅情報（「〇〇駅 徒歩5分」等�
 
 ## 2. `tenant_sections`（コンテンツのSSOT）
 
-各テナントが、どのセクションを、どんな内容で、どの順番・表示状態で持つかを管理する。
+各テナントが、どのセクションを、どんな内容で、どの順番・表示状態で持つかを管理する。管理対象12個とPR10の切替範囲は `hp-template-patterns.md` の共通セクションID節を正とする。`display_order` はDBに存在するが、PR10は固定順または既存順での表示のみとし、並べ替えUIは後続とする。
 
 ```
 id              uuid (PK, default gen_random_uuid())
@@ -159,7 +170,9 @@ PostgreSQL の enum 型は後から値を追加しづらい（型の ALTER が�
 
 `tenants` テーブルには `deleted_at`（soft delete）があるが、`tenant_sections` には設けない。理由: セクションの「非表示」は既に `is_visible` が担っており、削除と非表示を区別する実用上のメリットが薄い。テナントが特定セクションのレコード自体を物理的に持たなくなるケース（例: 一度設定したが二度と使わない）は稀で、`is_visible = false` で十分表現できる。これは設計判断であり、運用上ニーズが出れば再検討する。
 
-### `tenant_sections` の下書き/公開分離（`content` / `published_content`）
+### `tenant_sections` の下書き/公開分離（後続設計・PR10対象外）
+
+`published_content` は0001〜0007では未追加。以下は後続実装の仕様であり、PR10でカラム追加・公開処理は行わない。
 
 `tenant_sections` は 2 フィールドで下書きと公開を分離する。
 
@@ -285,17 +298,17 @@ deleted_at      timestamptz （nullable, soft delete）
 - `tenant_sections`: `is_visible = true` の行のみ SELECT を許可
 - `tenant_images`: 紐づく `tenant_sections` が `is_visible = true` の `section_id` に属する画像のみ SELECT を許可（または `deleted_at is null` の画像のみを許可する形でシンプルに設計してもよい。最終形は実装時に確定）
 
-### 管理画面用の owner/admin write policy（想定）
+### 管理画面の認可（Phase 0bはownerのみ）
 
-- 対象ロール: 認証済みユーザーのうち、当該 `tenant_id` の owner/admin であるユーザーのみ
-- INSERT / UPDATE / DELETE をこの条件で許可
+- WorkOSログインとSupabaseの `authenticated` ロールは別物。認証済みセッションの `user.id` を用いる専用RPCでowner・tenant境界を確認する。
+- PR10の管理用取得では、owner確認後に表示・非表示双方のセクションを返せること。公開用read policyだけに依存しない。具体的な取得・保存RPCはPR10で設計する。
 - **現状の実装**: WorkOS AuthKit による認証は実装済み（Phase 0b 本番稼働）。管理画面（`/admin/[tenantSlug]`）からの書き込みは、RLS の write policy ではなく **SECURITY DEFINER 関数**（`0006`: template_type の UPSERT / `0007`: mood の UPDATE）による認可付き書き込みで実現している。認可は必ず `workos_user_id` を起点に判定し、URL 由来の `tenant_slug` からは検索しない（起点方向の制約）
 - **service_role キーはアプリコードで使用しない**。DB への直接操作は migration の適用に限る（Supabase Dashboard の SQL Editor 経由）
 - エンドユーザー向けの RLS write policy 本体は、公開ページ側の要件が固まる段階で改めて設計する
 
 ### 現時点の扱い
 
-この節は設計のみであり、今回のドキュメント作成時点ではRLSポリシーのSQLは書かない・適用しない。`docs/future-architecture.md` の `src/lib/auth/` 前倒し実装（Phase 0b）と合わせて、write policy を実装する。
+0001の公開用read policyと0003〜0007の専用RPCが現行方式。0002はJWT連携の前提が未整備のため適用対象外であり、PR10の前提としてそのまま適用しない。将来のJWT連携・write policyは `auth-tenant-access-control.md` §4を参照する。
 
 ---
 
