@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { isMoodId } from '@/lib/constants/site-settings'
 import { saveOwnerTenantMood, saveOwnerTenantTemplateType } from '@/lib/tenant/site-settings'
 
 /**
@@ -29,8 +30,11 @@ export async function saveTemplateAction(
  * STEP2: mood 選択の保存 Server Action。
  *
  * - workos_user_id は saveOwnerTenantMood() 内部で requireAuth() から取得
- * - mood の一次検証は saveOwnerTenantMood 経由で 0007 update RPC が担う
- *   （NULL 拒否 + 長さ 1〜50 + 認可判定 + UPDATE 専用）
+ * - mood の列挙値検証は Server Action 冒頭の isMoodId() が担う。MOODS に無い値は
+ *   ここで throw し、DB へ到達させない（0007 は NULL 拒否 + 長さ 1〜50 + 認可判定
+ *   + UPDATE 専用を担うが、列挙検証はしない）
+ * - template_type 側は 0006 RPC が DB で列挙検証するため Server Action に検証を
+ *   置かない。mood のみ Server Action で検証するのはこの非対称を補うため
  * - 保存成功時は revalidatePath で /admin/[tenantSlug] を再検証し、page.tsx が
  *   最新の tenant_site_settings.mood を再取得・再描画する
  * - トースト等の成功表示は実装しない（PR8 と同じ）
@@ -44,6 +48,10 @@ export async function saveMoodAction(
   tenantSlug: string,
   mood: string,
 ): Promise<void> {
+  if (!isMoodId(mood)) {
+    throw new Error('Invalid mood')
+  }
+
   await saveOwnerTenantMood(tenantSlug, mood)
   revalidatePath(`/admin/${tenantSlug}`)
 }

@@ -85,6 +85,7 @@ custom_domain       text
 ### mood カラムの追加設計（0007 で実装）
 
 - `mood text NULL`（列挙は DB 側で行わない・許容値管理は `src/lib/constants/site-settings.ts` の `MOODS` 定数）
+- mood 保存時は Server Action で `isMoodId()` を用いて `MOODS` の許容値を検証し、未知値は RPC 呼び出し前に拒否する。これは Server Action 経由の保存に対するアプリ層検証であり、RPC 直接呼び出しまで含めた DB 制約ではない。
 - CHECK 制約 `tenant_site_settings_mood_length_check`: `mood IS NULL OR char_length(mood) BETWEEN 1 AND 50`
 - **mood 保存 RPC は UPDATE 専用**（PR9 の `update_owner_tenant_mood_for_workos_user`）: INSERT はしない。理由は `tenant_site_settings.template_type` が NOT NULL のため、site_settings 行未作成のテナントで mood だけを UPSERT すると `23502 not_null_violation` になる。PR8 の 0006（`upsert_owner_tenant_template_type_for_workos_user`）が行を作成し、PR9 はその既存行の mood を UPDATE する、という役割分担
 - 認可 OK でも site_settings 行が未作成の場合は 0 行返却（認可 NG と同じ扱い・案 P）。UI 側で `currentTemplateType === null` 時に事前 disabled して防御（詳細は 0007 SQL ヘッダ【UPDATE 専用にする設計判断】参照）
